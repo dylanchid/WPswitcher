@@ -23,6 +23,8 @@ protocol WallpaperService {
 protocol PlaylistStore {
     @discardableResult func createPlaylist(_ draft: PlaylistDraft) throws -> PlaylistRecord
     func fetchPlaylists() throws -> [PlaylistRecord]
+    func fetchPlaylist(id: UUID) throws -> PlaylistRecord?
+    @discardableResult func updatePlaylist(_ draft: PlaylistDraft) throws -> PlaylistRecord
     func deletePlaylist(id: UUID) throws
     @discardableResult func upsertWallpaper(_ draft: WallpaperDraft) throws -> WallpaperRecord
 }
@@ -41,6 +43,7 @@ protocol AppearanceObserver {
 
 enum PlaylistStoreError: Error {
     case playlistNotFound
+    case invalidDraft
 }
 
 final class DefaultWallpaperService: WallpaperService {

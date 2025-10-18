@@ -18,13 +18,19 @@ final class CoreDataPlaylistStoreTests: XCTestCase {
     }
 
     func testCreateAndFetchPlaylist() throws {
+        let light = try store.upsertWallpaper(WallpaperDraft(url: URL(fileURLWithPath: "/tmp/one.jpg"), displayName: "One", bookmarkData: nil))
+        let dark = try store.upsertWallpaper(WallpaperDraft(url: URL(fileURLWithPath: "/tmp/two.jpg"), displayName: "Two", bookmarkData: nil))
+
         let draft = PlaylistDraft(
+            id: nil,
             name: "Morning",
             intervalMinutes: 30,
-            wallpapers: [
-                WallpaperDraft(url: URL(fileURLWithPath: "/tmp/one.jpg"), displayName: "One", bookmarkData: nil),
-                WallpaperDraft(url: URL(fileURLWithPath: "/tmp/two.jpg"), displayName: "Two", bookmarkData: nil)
-            ]
+            playbackMode: .sequential,
+            multiDisplayPolicy: .mirror,
+            entries: [
+                PlaylistEntryDraft(id: UUID(), order: 0, lightWallpaperId: light.id, darkWallpaperId: dark.id)
+            ],
+            displayAssignments: []
         )
 
         let created = try store.createPlaylist(draft)
@@ -32,14 +38,104 @@ final class CoreDataPlaylistStoreTests: XCTestCase {
 
         XCTAssertEqual(fetched.count, 1)
         XCTAssertEqual(fetched.first?.id, created.id)
-        XCTAssertEqual(fetched.first?.wallpapers.count, draft.wallpapers.count)
+        XCTAssertEqual(fetched.first?.entries.count, 1)
+        XCTAssertEqual(fetched.first?.entries.first?.lightWallpaper?.id, light.id)
+        XCTAssertEqual(fetched.first?.entries.first?.darkWallpaper?.id, dark.id)
+    }
+
+    func testUpdatePlaylistAppliesChanges() throws {
+        let wallOne = try store.upsertWallpaper(WallpaperDraft(url: URL(fileURLWithPath: "/tmp/one.jpg"), displayName: "One", bookmarkData: nil))
+        let wallTwo = try store.upsertWallpaper(WallpaperDraft(url: URL(fileURLWithPath: "/tmp/two.jpg"), displayName: "Two", bookmarkData: nil))
+        let wallThree = try store.upsertWallpaper(WallpaperDraft(url: URL(fileURLWithPath: "/tmp/three.jpg"), displayName: "Three", bookmarkData: nil))
+
+        let initial = PlaylistDraft(
+            id: nil,
+            name: "Morning",
+            intervalMinutes: 30,
+            playbackMode: .sequential,
+            multiDisplayPolicy: .mirror,
+            entries: [
+                PlaylistEntryDraft(id: UUID(), order: 0, lightWallpaperId: wallOne.id, darkWallpaperId: nil)
+            ],
+            displayAssignments: []
+        )
+
+        let created = try store.createPlaylist(initial)
+        let updatedDraft = PlaylistDraft(
+            id: created.id,
+            name: "Evening",
+            intervalMinutes: 45,
+            playbackMode: .random,
+            multiDisplayPolicy: .perDisplay,
+            entries: [
+                PlaylistEntryDraft(id: UUID(), order: 0, lightWallpaperId: wallTwo.id, darkWallpaperId: wallThree.id),
+                PlaylistEntryDraft(id: UUID(), order: 1, lightWallpaperId: wallOne.id, darkWallpaperId: nil)
+            ],
+            displayAssignments: [
+                DisplayAssignmentDraft(id: UUID(), displayID: "DISPLAY-1", order: 0, lightWallpaperId: wallTwo.id, darkWallpaperId: wallThree.id)
+            ]
+        )
+
+        let updated = try store.updatePlaylist(updatedDraft)
+
+        XCTAssertEqual(updated.name, "Evening")
+        XCTAssertEqual(updated.intervalMinutes, 45)
+        XCTAssertEqual(updated.playbackMode, .random)
+        XCTAssertEqual(updated.multiDisplayPolicy, .perDisplay)
+        XCTAssertEqual(updated.entries.count, 2)
+        XCTAssertEqual(updated.entries.first?.lightWallpaper?.id, wallTwo.id)
+        XCTAssertEqual(updated.entries.first?.darkWallpaper?.id, wallThree.id)
+        XCTAssertEqual(updated.displayAssignments.count, 1)
+        XCTAssertEqual(updated.displayAssignments.first?.displayID, "DISPLAY-1")
+    }
+
+    func testFetchPlaylistByIdentifier() throws {
+        let draft = PlaylistDraft(
+            id: nil,
+            name: "Sample",
+            intervalMinutes: 20,
+            playbackMode: .sequential,
+            multiDisplayPolicy: .mirror,
+            entries: [],
+            displayAssignments: []
+        )
+
+        let created = try store.createPlaylist(draft)
+        let fetched = try store.fetchPlaylist(id: created.id)
+
+        XCTAssertNotNil(fetched)
+        XCTAssertEqual(fetched?.id, created.id)
+        XCTAssertEqual(fetched?.name, "Sample")
+    }
+
+    func testUpdatePlaylistWithoutIdentifierThrows() throws {
+        let draft = PlaylistDraft(
+            id: nil,
+            name: "Nameless",
+            intervalMinutes: 10,
+            playbackMode: .sequential,
+            multiDisplayPolicy: .mirror,
+            entries: [],
+            displayAssignments: []
+        )
+
+        XCTAssertThrowsError(try store.updatePlaylist(draft)) { error in
+            guard case PlaylistStoreError.invalidDraft = error else {
+                XCTFail("Unexpected error \(error)")
+                return
+            }
+        }
     }
 
     func testDeletePlaylistRemovesEntity() throws {
         let draft = PlaylistDraft(
+            id: nil,
             name: "Temp",
             intervalMinutes: 45,
-            wallpapers: []
+            playbackMode: .sequential,
+            multiDisplayPolicy: .mirror,
+            entries: [],
+            displayAssignments: []
         )
 
         let playlist = try store.createPlaylist(draft)

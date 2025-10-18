@@ -14,7 +14,7 @@ struct SettingsView: View {
                     Label("General", systemImage: "gearshape")
                 }
 
-            WallpaperBrowserView()
+            WallpaperLibraryView()
                 .tag(SettingsSection.library)
                 .tabItem {
                     Label("Library", systemImage: "photo.on.rectangle")

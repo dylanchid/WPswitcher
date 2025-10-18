@@ -5,7 +5,11 @@
         <attribute name="id" optional="NO" attributeType="UUID"/>
         <attribute name="intervalMinutes" optional="NO" attributeType="Integer 32" defaultValueString="15"/>
         <attribute name="name" optional="NO" attributeType="String"/>
+        <attribute name="playbackModeRaw" optional="NO" attributeType="String" defaultValueString="sequential"/>
+        <attribute name="multiDisplayPolicyRaw" optional="NO" attributeType="String" defaultValueString="mirror"/>
         <relationship name="wallpapers" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="WallpaperEntity" inverseName="playlists" inverseEntity="WallpaperEntity" ordered="YES"/>
+        <relationship name="items" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="PlaylistItemEntity" inverseName="playlist" inverseEntity="PlaylistItemEntity" ordered="YES"/>
+        <relationship name="displayAssignments" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="DisplayAssignmentEntity" inverseName="playlist" inverseEntity="DisplayAssignmentEntity" ordered="YES"/>
     </entity>
     <entity name="WallpaperEntity" representedClassName="WallpaperEntity" syncable="YES">
         <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
@@ -14,9 +18,30 @@
         <attribute name="bookmarkData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
         <attribute name="url" optional="NO" attributeType="URI"/>
         <relationship name="playlists" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="PlaylistEntity" inverseName="wallpapers" inverseEntity="PlaylistEntity"/>
+        <relationship name="lightPlaylistItems" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="PlaylistItemEntity" inverseName="lightWallpaper" inverseEntity="PlaylistItemEntity"/>
+        <relationship name="darkPlaylistItems" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="PlaylistItemEntity" inverseName="darkWallpaper" inverseEntity="PlaylistItemEntity"/>
+        <relationship name="lightDisplayAssignments" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="DisplayAssignmentEntity" inverseName="lightWallpaper" inverseEntity="DisplayAssignmentEntity"/>
+        <relationship name="darkDisplayAssignments" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="DisplayAssignmentEntity" inverseName="darkWallpaper" inverseEntity="DisplayAssignmentEntity"/>
+    </entity>
+    <entity name="PlaylistItemEntity" representedClassName="PlaylistItemEntity" syncable="YES">
+        <attribute name="id" optional="NO" attributeType="UUID"/>
+        <attribute name="order" optional="NO" attributeType="Integer 32"/>
+        <relationship name="playlist" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="PlaylistEntity" inverseName="items" inverseEntity="PlaylistEntity"/>
+        <relationship name="lightWallpaper" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="WallpaperEntity" inverseName="lightPlaylistItems" inverseEntity="WallpaperEntity"/>
+        <relationship name="darkWallpaper" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="WallpaperEntity" inverseName="darkPlaylistItems" inverseEntity="WallpaperEntity"/>
+    </entity>
+    <entity name="DisplayAssignmentEntity" representedClassName="DisplayAssignmentEntity" syncable="YES">
+        <attribute name="displayID" optional="NO" attributeType="String"/>
+        <attribute name="id" optional="NO" attributeType="UUID"/>
+        <attribute name="order" optional="NO" attributeType="Integer 32"/>
+        <relationship name="playlist" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="PlaylistEntity" inverseName="displayAssignments" inverseEntity="PlaylistEntity"/>
+        <relationship name="lightWallpaper" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="WallpaperEntity" inverseName="lightDisplayAssignments" inverseEntity="WallpaperEntity"/>
+        <relationship name="darkWallpaper" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="WallpaperEntity" inverseName="darkDisplayAssignments" inverseEntity="WallpaperEntity"/>
     </entity>
     <elements>
-        <element name="PlaylistEntity" positionX="160" positionY="160" width="128" height="120"/>
-        <element name="WallpaperEntity" positionX="380" positionY="160" width="128" height="120"/>
+        <element name="PlaylistEntity" positionX="160" positionY="160" width="128" height="150"/>
+        <element name="WallpaperEntity" positionX="420" positionY="160" width="128" height="180"/>
+        <element name="PlaylistItemEntity" positionX="160" positionY="360" width="128" height="120"/>
+        <element name="DisplayAssignmentEntity" positionX="420" positionY="360" width="128" height="120"/>
     </elements>
 </model>

@@ -21,9 +21,10 @@
 		00B8AA162C7E7F2D00A5E9F1 /* DataModel.xcdatamodeld in Resources */ = {isa = PBXBuildFile; fileRef = 00B8AA0E2C7E7F2D00A5E9F1 /* DataModel.xcdatamodeld */; };
 		00B8AA172C7E7F2D00A5E9F1 /* CoreDataPlaylistStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AA0F2C7E7F2D00A5E9F1 /* CoreDataPlaylistStoreTests.swift */; };
 		00B8AA1B2C7E7F2E00A5E9F1 /* CoreDataWallpaperService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AA1A2C7E7F2E00A5E9F1 /* CoreDataWallpaperService.swift */; };
-		00B8AA1D2C7E7F2E00A5E9F1 /* WallpaperBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AA1C2C7E7F2E00A5E9F1 /* WallpaperBrowserView.swift */; };
 		00B8AA1F2C7E7F2E00A5E9F1 /* CoreDataWallpaperServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AA1E2C7E7F2E00A5E9F1 /* CoreDataWallpaperServiceTests.swift */; };
 		00B8AA212C7E7F2E00A5E9F1 /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AA202C7E7F2E00A5E9F1 /* MainWindowView.swift */; };
+		00B8AB312C7E7F2F00A5E9F1 /* PlaylistEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AB302C7E7F2F00A5E9F1 /* PlaylistEditorView.swift */; };
+		00B8AB332C7E7F2F00A5E9F1 /* PlaylistEditorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AB322C7E7F2F00A5E9F1 /* PlaylistEditorViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,9 +56,10 @@
 		00B8AA0E2C7E7F2D00A5E9F1 /* DataModel.xcdatamodeld */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodeld; path = DataModel.xcdatamodeld; sourceTree = "<group>"; };
 		00B8AA0F2C7E7F2D00A5E9F1 /* CoreDataPlaylistStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataPlaylistStoreTests.swift; sourceTree = "<group>"; };
 		00B8AA1A2C7E7F2E00A5E9F1 /* CoreDataWallpaperService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataWallpaperService.swift; sourceTree = "<group>"; };
-		00B8AA1C2C7E7F2E00A5E9F1 /* WallpaperBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperBrowserView.swift; sourceTree = "<group>"; };
 		00B8AA1E2C7E7F2E00A5E9F1 /* CoreDataWallpaperServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataWallpaperServiceTests.swift; sourceTree = "<group>"; };
 		00B8AA202C7E7F2E00A5E9F1 /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
+		00B8AB302C7E7F2F00A5E9F1 /* PlaylistEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlaylistEditorView.swift; path = Views/PlaylistEditorView.swift; sourceTree = "<group>"; };
+		00B8AB322C7E7F2F00A5E9F1 /* PlaylistEditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlaylistEditorViewModel.swift; path = ViewModels/PlaylistEditorViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -95,8 +97,9 @@
 				00B8AA182C7E7F2D00A5E9F1 /* Models */,
 				00B8AA192C7E7F2D00A5E9F1 /* Persistence */,
 				00B8AA092C7E7F2D00A5E9F1 /* Services */,
-				00B8AA1C2C7E7F2E00A5E9F1 /* WallpaperBrowserView.swift */,
 				00B8AA202C7E7F2E00A5E9F1 /* MainWindowView.swift */,
+				00B8AB302C7E7F2F00A5E9F1 /* PlaylistEditorView.swift */,
+				00B8AB322C7E7F2F00A5E9F1 /* PlaylistEditorViewModel.swift */,
 				00B8A9A72C7E7F2C00A5E9F1 /* SettingsView.swift */,
 				00B8A9AC2C7E7F2C00A5E9F1 /* Assets.xcassets */,
 				00B8A9A62C7E7F2C00A5E9F1 /* Info.plist */,
@@ -256,8 +259,9 @@
 				00B8AA152C7E7F2D00A5E9F1 /* CoreDataPlaylistStore.swift in Sources */,
 				00B8AA1B2C7E7F2E00A5E9F1 /* CoreDataWallpaperService.swift in Sources */,
 				00B8AA122C7E7F2D00A5E9F1 /* PlaylistModels.swift in Sources */,
-				00B8AA1D2C7E7F2E00A5E9F1 /* WallpaperBrowserView.swift in Sources */,
 				00B8AA212C7E7F2E00A5E9F1 /* MainWindowView.swift in Sources */,
+				00B8AB312C7E7F2F00A5E9F1 /* PlaylistEditorView.swift in Sources */,
+				00B8AB332C7E7F2F00A5E9F1 /* PlaylistEditorViewModel.swift in Sources */,
 				00B8A9AA2C7E7F2C00A5E9F1 /* SettingsView.swift in Sources */,
 				00B8A9A82C7E7F2C00A5E9F1 /* WPswitcherApp.swift in Sources */,
 				00B8A9A92C7E7F2C00A5E9F1 /* AppDelegate.swift in Sources */,

@@ -17,7 +17,7 @@ final class CoreDataPlaylistStore: PlaylistStore {
         context.performAndWait {
             do {
                 let playlist = PlaylistEntity(context: context)
-                playlist.id = UUID()
+                playlist.id = draft.id ?? UUID()
                 playlist.applyDraft(draft, in: context)
                 try context.save()
                 producedRecord = playlist.toRecord()
@@ -56,6 +56,69 @@ final class CoreDataPlaylistStore: PlaylistStore {
         }
 
         return playlists
+    }
+
+    func fetchPlaylist(id: UUID) throws -> PlaylistRecord? {
+        let context = persistence.viewContext
+        var record: PlaylistRecord?
+        var recordedError: Error?
+
+        context.performAndWait {
+            do {
+                let request = PlaylistEntity.fetchRequest()
+                request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+                request.fetchLimit = 1
+                if let result = try context.fetch(request).first {
+                    record = result.toRecord()
+                }
+            } catch {
+                recordedError = error
+            }
+        }
+
+        if let recordedError {
+            throw recordedError
+        }
+
+        return record
+    }
+
+    @discardableResult
+    func updatePlaylist(_ draft: PlaylistDraft) throws -> PlaylistRecord {
+        guard let identifier = draft.id else {
+            throw PlaylistStoreError.invalidDraft
+        }
+
+        let context = persistence.viewContext
+        var producedRecord: PlaylistRecord?
+        var recordedError: Error?
+
+        context.performAndWait {
+            do {
+                let request = PlaylistEntity.fetchRequest()
+                request.predicate = NSPredicate(format: "id == %@", identifier as CVarArg)
+                request.fetchLimit = 1
+                guard let playlist = try context.fetch(request).first else {
+                    recordedError = PlaylistStoreError.playlistNotFound
+                    return
+                }
+
+                playlist.applyDraft(draft, in: context)
+                try context.save()
+                producedRecord = playlist.toRecord()
+            } catch {
+                recordedError = error
+            }
+        }
+
+        if let recordedError {
+            throw recordedError
+        }
+
+        guard let producedRecord else {
+            fatalError("Failed to update playlist record")
+        }
+        return producedRecord
     }
 
     func deletePlaylist(id: UUID) throws {
