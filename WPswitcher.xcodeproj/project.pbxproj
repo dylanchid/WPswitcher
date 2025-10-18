@@ -1,0 +1,527 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		00B8A9A82C7E7F2C00A5E9F1 /* WPswitcherApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8A9A52C7E7F2C00A5E9F1 /* WPswitcherApp.swift */; };
+		00B8A9A92C7E7F2C00A5E9F1 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8A9A42C7E7F2C00A5E9F1 /* AppDelegate.swift */; };
+		00B8A9AA2C7E7F2C00A5E9F1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8A9A72C7E7F2C00A5E9F1 /* SettingsView.swift */; };
+		00B8A9AD2C7E7F2C00A5E9F1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 00B8A9AC2C7E7F2C00A5E9F1 /* Assets.xcassets */; };
+		00B8A9B32C7E7F2C00A5E9F1 /* WPswitcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8A9B22C7E7F2C00A5E9F1 /* WPswitcherTests.swift */; };
+		00B8AA062C7E7F2D00A5E9F1 /* ServiceProtocols.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AA052C7E7F2D00A5E9F1 /* ServiceProtocols.swift */; };
+		00B8AA082C7E7F2D00A5E9F1 /* ServiceRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AA072C7E7F2D00A5E9F1 /* ServiceRegistry.swift */; };
+		00B8AA122C7E7F2D00A5E9F1 /* PlaylistModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AA0A2C7E7F2D00A5E9F1 /* PlaylistModels.swift */; };
+		00B8AA132C7E7F2D00A5E9F1 /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AA0B2C7E7F2D00A5E9F1 /* PersistenceController.swift */; };
+		00B8AA142C7E7F2D00A5E9F1 /* ManagedObjects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AA0C2C7E7F2D00A5E9F1 /* ManagedObjects.swift */; };
+		00B8AA152C7E7F2D00A5E9F1 /* CoreDataPlaylistStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AA0D2C7E7F2D00A5E9F1 /* CoreDataPlaylistStore.swift */; };
+		00B8AA162C7E7F2D00A5E9F1 /* DataModel.xcdatamodeld in Resources */ = {isa = PBXBuildFile; fileRef = 00B8AA0E2C7E7F2D00A5E9F1 /* DataModel.xcdatamodeld */; };
+		00B8AA172C7E7F2D00A5E9F1 /* CoreDataPlaylistStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AA0F2C7E7F2D00A5E9F1 /* CoreDataPlaylistStoreTests.swift */; };
+		00B8AA1B2C7E7F2E00A5E9F1 /* CoreDataWallpaperService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AA1A2C7E7F2E00A5E9F1 /* CoreDataWallpaperService.swift */; };
+		00B8AA1D2C7E7F2E00A5E9F1 /* WallpaperBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AA1C2C7E7F2E00A5E9F1 /* WallpaperBrowserView.swift */; };
+		00B8AA1F2C7E7F2E00A5E9F1 /* CoreDataWallpaperServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AA1E2C7E7F2E00A5E9F1 /* CoreDataWallpaperServiceTests.swift */; };
+		00B8AA212C7E7F2E00A5E9F1 /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AA202C7E7F2E00A5E9F1 /* MainWindowView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		00B8A9B52C7E7F2C00A5E9F1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 00B8A99A2C7E7F2B00A5E9F1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 00B8A99C2C7E7F2B00A5E9F1;
+			remoteInfo = WPswitcher;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		00B8A9A42C7E7F2C00A5E9F1 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		00B8A9A52C7E7F2C00A5E9F1 /* WPswitcherApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WPswitcherApp.swift; sourceTree = "<group>"; };
+		00B8A9A62C7E7F2C00A5E9F1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		00B8A9A72C7E7F2C00A5E9F1 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		00B8A9AC2C7E7F2C00A5E9F1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		00B8A9B02C7E7F2C00A5E9F1 /* WPswitcher.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WPswitcher.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		00B8A9B12C7E7F2C00A5E9F1 /* WPswitcherTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WPswitcherTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		00B8A9B22C7E7F2C00A5E9F1 /* WPswitcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WPswitcherTests.swift; sourceTree = "<group>"; };
+		00B8AA012C7E7F2D00A5E9F1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		00B8AA052C7E7F2D00A5E9F1 /* ServiceProtocols.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceProtocols.swift; sourceTree = "<group>"; };
+		00B8AA072C7E7F2D00A5E9F1 /* ServiceRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceRegistry.swift; sourceTree = "<group>"; };
+		00B8AA0A2C7E7F2D00A5E9F1 /* PlaylistModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistModels.swift; sourceTree = "<group>"; };
+		00B8AA0B2C7E7F2D00A5E9F1 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
+		00B8AA0C2C7E7F2D00A5E9F1 /* ManagedObjects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedObjects.swift; sourceTree = "<group>"; };
+		00B8AA0D2C7E7F2D00A5E9F1 /* CoreDataPlaylistStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataPlaylistStore.swift; sourceTree = "<group>"; };
+		00B8AA0E2C7E7F2D00A5E9F1 /* DataModel.xcdatamodeld */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodeld; path = DataModel.xcdatamodeld; sourceTree = "<group>"; };
+		00B8AA0F2C7E7F2D00A5E9F1 /* CoreDataPlaylistStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataPlaylistStoreTests.swift; sourceTree = "<group>"; };
+		00B8AA1A2C7E7F2E00A5E9F1 /* CoreDataWallpaperService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataWallpaperService.swift; sourceTree = "<group>"; };
+		00B8AA1C2C7E7F2E00A5E9F1 /* WallpaperBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperBrowserView.swift; sourceTree = "<group>"; };
+		00B8AA1E2C7E7F2E00A5E9F1 /* CoreDataWallpaperServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataWallpaperServiceTests.swift; sourceTree = "<group>"; };
+		00B8AA202C7E7F2E00A5E9F1 /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		00B8A99F2C7E7F2B00A5E9F1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		00B8A9AF2C7E7F2C00A5E9F1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		00B8A99B2C7E7F2B00A5E9F1 = {
+			isa = PBXGroup;
+			children = (
+				00B8A9A32C7E7F2C00A5E9F1 /* WPswitcher */,
+				00B8AA022C7E7F2D00A5E9F1 /* WPswitcherTests */,
+				00B8A9B42C7E7F2C00A5E9F1,
+			);
+			sourceTree = "<group>";
+		};
+		00B8A9A32C7E7F2C00A5E9F1 /* WPswitcher */ = {
+			isa = PBXGroup;
+			children = (
+				00B8A9A52C7E7F2C00A5E9F1 /* WPswitcherApp.swift */,
+				00B8A9A42C7E7F2C00A5E9F1 /* AppDelegate.swift */,
+				00B8AA182C7E7F2D00A5E9F1 /* Models */,
+				00B8AA192C7E7F2D00A5E9F1 /* Persistence */,
+				00B8AA092C7E7F2D00A5E9F1 /* Services */,
+				00B8AA1C2C7E7F2E00A5E9F1 /* WallpaperBrowserView.swift */,
+				00B8AA202C7E7F2E00A5E9F1 /* MainWindowView.swift */,
+				00B8A9A72C7E7F2C00A5E9F1 /* SettingsView.swift */,
+				00B8A9AC2C7E7F2C00A5E9F1 /* Assets.xcassets */,
+				00B8A9A62C7E7F2C00A5E9F1 /* Info.plist */,
+			);
+			path = WPswitcher;
+			sourceTree = "<group>";
+		};
+		00B8A9B42C7E7F2C00A5E9F1 = {
+			isa = PBXGroup;
+			children = (
+				00B8A9B02C7E7F2C00A5E9F1 /* WPswitcher.app */,
+				00B8A9B12C7E7F2C00A5E9F1 /* WPswitcherTests.xctest */,
+			);
+			sourceTree = "<group>";
+		};
+		00B8AA022C7E7F2D00A5E9F1 /* WPswitcherTests */ = {
+			isa = PBXGroup;
+			children = (
+				00B8A9B22C7E7F2C00A5E9F1 /* WPswitcherTests.swift */,
+				00B8AA0F2C7E7F2D00A5E9F1 /* CoreDataPlaylistStoreTests.swift */,
+				00B8AA1E2C7E7F2E00A5E9F1 /* CoreDataWallpaperServiceTests.swift */,
+				00B8AA012C7E7F2D00A5E9F1 /* Info.plist */,
+			);
+			path = WPswitcherTests;
+			sourceTree = "<group>";
+		};
+		00B8AA182C7E7F2D00A5E9F1 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				00B8AA0A2C7E7F2D00A5E9F1 /* PlaylistModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		00B8AA192C7E7F2D00A5E9F1 /* Persistence */ = {
+			isa = PBXGroup;
+			children = (
+				00B8AA0B2C7E7F2D00A5E9F1 /* PersistenceController.swift */,
+				00B8AA0C2C7E7F2D00A5E9F1 /* ManagedObjects.swift */,
+				00B8AA0E2C7E7F2D00A5E9F1 /* DataModel.xcdatamodeld */,
+			);
+			path = Persistence;
+			sourceTree = "<group>";
+		};
+		00B8AA092C7E7F2D00A5E9F1 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				00B8AA052C7E7F2D00A5E9F1 /* ServiceProtocols.swift */,
+				00B8AA072C7E7F2D00A5E9F1 /* ServiceRegistry.swift */,
+				00B8AA0D2C7E7F2D00A5E9F1 /* CoreDataPlaylistStore.swift */,
+				00B8AA1A2C7E7F2E00A5E9F1 /* CoreDataWallpaperService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		00B8A99C2C7E7F2B00A5E9F1 /* WPswitcher */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 00B8AA042C7E7F2D00A5E9F1 /* Build configuration list for PBXNativeTarget "WPswitcher" */;
+			buildPhases = (
+				00B8A99E2C7E7F2B00A5E9F1 /* Sources */,
+				00B8A99F2C7E7F2B00A5E9F1 /* Frameworks */,
+				00B8A9A02C7E7F2B00A5E9F1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = WPswitcher;
+			productName = WPswitcher;
+			productReference = 00B8A9B02C7E7F2C00A5E9F1 /* WPswitcher.app */;
+			productType = "com.apple.product-type.application";
+		};
+		00B8A99D2C7E7F2B00A5E9F1 /* WPswitcherTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 00B8A9BB2C7E7F2C00A5E9F1 /* Build configuration list for PBXNativeTarget "WPswitcherTests" */;
+			buildPhases = (
+				00B8A9AE2C7E7F2C00A5E9F1 /* Sources */,
+				00B8A9AF2C7E7F2C00A5E9F1 /* Frameworks */,
+				00B8AA032C7E7F2D00A5E9F1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				00B8A9B62C7E7F2C00A5E9F1 /* PBXTargetDependency */,
+			);
+			name = WPswitcherTests;
+			productName = WPswitcherTests;
+			productReference = 00B8A9B12C7E7F2C00A5E9F1 /* WPswitcherTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		00B8A99A2C7E7F2B00A5E9F1 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1510;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+					00B8A99C2C7E7F2B00A5E9F1 = {
+						CreatedOnToolsVersion = 15.1;
+					};
+					00B8A99D2C7E7F2B00A5E9F1 = {
+						CreatedOnToolsVersion = 15.1;
+						TestTargetID = 00B8A99C2C7E7F2B00A5E9F1;
+					};
+				};
+			};
+			buildConfigurationList = 00B8A99D2C7E7F2B00A5E9F2 /* Build configuration list for PBXProject "WPswitcher" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 00B8A99B2C7E7F2B00A5E9F1;
+			productRefGroup = 00B8A9B42C7E7F2C00A5E9F1;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				00B8A99C2C7E7F2B00A5E9F1 /* WPswitcher */,
+				00B8A99D2C7E7F2B00A5E9F1 /* WPswitcherTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		00B8A9A02C7E7F2B00A5E9F1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				00B8A9AD2C7E7F2C00A5E9F1 /* Assets.xcassets in Resources */,
+				00B8AA162C7E7F2D00A5E9F1 /* DataModel.xcdatamodeld in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		00B8AA032C7E7F2D00A5E9F1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		00B8A99E2C7E7F2B00A5E9F1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				00B8AA132C7E7F2D00A5E9F1 /* PersistenceController.swift in Sources */,
+				00B8AA142C7E7F2D00A5E9F1 /* ManagedObjects.swift in Sources */,
+				00B8AA152C7E7F2D00A5E9F1 /* CoreDataPlaylistStore.swift in Sources */,
+				00B8AA1B2C7E7F2E00A5E9F1 /* CoreDataWallpaperService.swift in Sources */,
+				00B8AA122C7E7F2D00A5E9F1 /* PlaylistModels.swift in Sources */,
+				00B8AA1D2C7E7F2E00A5E9F1 /* WallpaperBrowserView.swift in Sources */,
+				00B8AA212C7E7F2E00A5E9F1 /* MainWindowView.swift in Sources */,
+				00B8A9AA2C7E7F2C00A5E9F1 /* SettingsView.swift in Sources */,
+				00B8A9A82C7E7F2C00A5E9F1 /* WPswitcherApp.swift in Sources */,
+				00B8A9A92C7E7F2C00A5E9F1 /* AppDelegate.swift in Sources */,
+				00B8AA062C7E7F2D00A5E9F1 /* ServiceProtocols.swift in Sources */,
+				00B8AA082C7E7F2D00A5E9F1 /* ServiceRegistry.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		00B8A9AE2C7E7F2C00A5E9F1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				00B8AA172C7E7F2D00A5E9F1 /* CoreDataPlaylistStoreTests.swift in Sources */,
+				00B8AA1F2C7E7F2E00A5E9F1 /* CoreDataWallpaperServiceTests.swift in Sources */,
+				00B8A9B32C7E7F2C00A5E9F1 /* WPswitcherTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		00B8A9B62C7E7F2C00A5E9F1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 00B8A99C2C7E7F2B00A5E9F1 /* WPswitcher */;
+			targetProxy = 00B8A9B52C7E7F2C00A5E9F1 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		00B8A9B72C7E7F2C00A5E9F1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_NS_ASSERTIONS = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		00B8A9B82C7E7F2C00A5E9F1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
+				INFOPLIST_FILE = WPswitcher/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.WPswitcher;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 6;
+			};
+			name = Debug;
+		};
+		00B8A9B92C7E7F2C00A5E9F1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		00B8A9BA2C7E7F2C00A5E9F1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
+				INFOPLIST_FILE = WPswitcher/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.WPswitcher;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 6;
+			};
+			name = Release;
+		};
+		00B8A9BC2C7E7F2C00A5E9F1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
+				INFOPLIST_FILE = WPswitcherTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.WPswitcherTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WPswitcher.app/Contents/MacOS/WPswitcher";
+			};
+			name = Debug;
+		};
+		00B8A9BD2C7E7F2C00A5E9F1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
+				INFOPLIST_FILE = WPswitcherTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.WPswitcherTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WPswitcher.app/Contents/MacOS/WPswitcher";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		00B8A99D2C7E7F2B00A5E9F2 /* Build configuration list for PBXProject "WPswitcher" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				00B8A9B72C7E7F2C00A5E9F1 /* Debug */,
+				00B8A9B92C7E7F2C00A5E9F1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		00B8A9BB2C7E7F2C00A5E9F1 /* Build configuration list for PBXNativeTarget "WPswitcherTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				00B8A9BC2C7E7F2C00A5E9F1 /* Debug */,
+				00B8A9BD2C7E7F2C00A5E9F1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		00B8AA042C7E7F2D00A5E9F1 /* Build configuration list for PBXNativeTarget "WPswitcher" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				00B8A9B82C7E7F2C00A5E9F1 /* Debug */,
+				00B8A9BA2C7E7F2C00A5E9F1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 00B8A99A2C7E7F2B00A5E9F1 /* Project object */;
+}
