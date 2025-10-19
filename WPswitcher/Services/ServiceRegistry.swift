@@ -11,14 +11,27 @@ final class ServiceRegistry: ObservableObject {
         persistence: PersistenceController = .shared,
         wallpaperService: WallpaperService? = nil,
         playlistStore: PlaylistStore? = nil,
-        schedulerCoordinator: SchedulerCoordinator = DefaultSchedulerCoordinator(),
+        schedulerCoordinator: SchedulerCoordinator? = nil,
         appearanceObserver: AppearanceObserver = DefaultAppearanceObserver()
     ) {
         self.persistence = persistence
         let resolvedPlaylistStore = playlistStore ?? CoreDataPlaylistStore(persistence: persistence)
+        let resolvedWallpaperService = wallpaperService ?? CoreDataWallpaperService(
+            persistence: persistence,
+            playlistStore: resolvedPlaylistStore
+        )
+
         self.playlistStore = resolvedPlaylistStore
-        self.wallpaperService = wallpaperService ?? CoreDataWallpaperService(persistence: persistence, playlistStore: resolvedPlaylistStore)
-        self.schedulerCoordinator = schedulerCoordinator
+        self.wallpaperService = resolvedWallpaperService
+
+        if let schedulerCoordinator {
+            self.schedulerCoordinator = schedulerCoordinator
+        } else {
+            self.schedulerCoordinator = DefaultSchedulerCoordinator(
+                playlistStore: resolvedPlaylistStore,
+                wallpaperService: resolvedWallpaperService
+            )
+        }
         self.appearanceObserver = appearanceObserver
     }
 }

@@ -1,11 +1,20 @@
 import CoreData
 import Foundation
 
+extension Notification.Name {
+    static let playlistStoreDidChange = Notification.Name("com.example.WPswitcher.playlistStoreDidChange")
+}
+
 final class CoreDataPlaylistStore: PlaylistStore {
     private let persistence: PersistenceController
+    private let notificationCenter: NotificationCenter
 
-    init(persistence: PersistenceController = .shared) {
+    init(
+        persistence: PersistenceController = .shared,
+        notificationCenter: NotificationCenter = .default
+    ) {
         self.persistence = persistence
+        self.notificationCenter = notificationCenter
     }
 
     @discardableResult
@@ -33,6 +42,7 @@ final class CoreDataPlaylistStore: PlaylistStore {
         guard let producedRecord else {
             fatalError("Failed to create playlist record")
         }
+        notifyPlaylistChanged(playlistID: producedRecord.id)
         return producedRecord
     }
 
@@ -118,12 +128,14 @@ final class CoreDataPlaylistStore: PlaylistStore {
         guard let producedRecord else {
             fatalError("Failed to update playlist record")
         }
+        notifyPlaylistChanged(playlistID: producedRecord.id)
         return producedRecord
     }
 
     func deletePlaylist(id: UUID) throws {
         let context = persistence.viewContext
         var recordedError: Error?
+        var deleted = false
 
         context.performAndWait {
             let request = PlaylistEntity.fetchRequest()
@@ -139,6 +151,7 @@ final class CoreDataPlaylistStore: PlaylistStore {
 
                 context.delete(playlist)
                 try context.save()
+                deleted = true
             } catch {
                 recordedError = error
             }
@@ -146,6 +159,10 @@ final class CoreDataPlaylistStore: PlaylistStore {
 
         if let recordedError {
             throw recordedError
+        }
+
+        if deleted {
+            notifyPlaylistChanged(playlistID: id)
         }
     }
 
@@ -186,5 +203,13 @@ final class CoreDataPlaylistStore: PlaylistStore {
             fatalError("Failed to upsert wallpaper record")
         }
         return record
+    }
+
+    private func notifyPlaylistChanged(playlistID: UUID) {
+        notificationCenter.post(
+            name: .playlistStoreDidChange,
+            object: self,
+            userInfo: ["playlistID": playlistID]
+        )
     }
 }
