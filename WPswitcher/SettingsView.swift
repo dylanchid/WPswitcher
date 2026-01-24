@@ -46,7 +46,11 @@ private enum SettingsSection: Hashable {
     case library
 }
 
-#Preview {
-    SettingsView()
-        .environmentObject(ServiceRegistry.preview)
+#if DEBUG
+struct SettingsView_Previews: PreviewProvider {
+    static var previews: some View {
+        SettingsView()
+            .environmentObject(ServiceRegistry.preview)
+    }
 }
+#endif

@@ -1,0 +1,11 @@
+included:
+  - WPswitcher
+  - WPswitcherTests
+
+excluded:
+  - WPswitcher.xcodeproj
+  - build
+  - DerivedData
+  - .build
+
+cache_path: .swiftlint_cache

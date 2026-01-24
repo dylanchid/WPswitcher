@@ -730,13 +730,17 @@ private struct ThumbnailPlaceholder: View {
     }
 }
 
-#Preview {
-    WallpaperLibraryView()
-        .environmentObject(ServiceRegistry.preview)
-        .frame(width: 860, height: 560)
-}
+#if DEBUG
+struct MainWindowView_Previews: PreviewProvider {
+    static var previews: some View {
+        Group {
+            WallpaperLibraryView()
+                .environmentObject(ServiceRegistry.preview)
+                .frame(width: 860, height: 560)
 
-#Preview {
-    MainWindowView()
-        .environmentObject(ServiceRegistry.preview)
+            MainWindowView()
+                .environmentObject(ServiceRegistry.preview)
+        }
+    }
 }
+#endif

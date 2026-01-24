@@ -60,3 +60,9 @@ fastlane/test_output
 # Code Injection
 #
 iOSInjectionProject/
+
+# bv (beads viewer) local config and caches
+.bv/
+
+# SwiftLint cache
+.swiftlint_cache/
