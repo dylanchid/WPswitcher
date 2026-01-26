@@ -13,92 +13,104 @@ struct PlaylistEditorView: View {
     }
 
     var body: some View {
-        List {
-            if let error = viewModel.errorMessage {
-                Section {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                if let error = viewModel.errorMessage {
                     Text(error)
                         .font(.footnote)
                         .foregroundStyle(.red)
-                }
-            }
-
-            Section("Details") {
-                TextField("Playlist Name", text: $viewModel.name)
-                    .focused($focusedField, equals: .name)
-                Stepper(
-                    value: $viewModel.intervalMinutes,
-                    in: 1...240,
-                    step: 5
-                ) {
-                    Text("Rotation Interval: \(viewModel.intervalMinutes) minutes")
-                }
-                Picker("Playback Mode", selection: $viewModel.playbackMode) {
-                    ForEach(PlaylistPlaybackMode.allCases, id: \.self) { mode in
-                        Text(label(for: mode)).tag(mode)
-                    }
-                }
-            }
-
-            Section {
-                entriesHeader
-                if viewModel.entries.isEmpty {
-                    Text("Add wallpapers to start building this playlist.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(Array(viewModel.entries.indices), id: \.self) { index in
-                        PlaylistEntryRow(
-                            index: index,
-                            isFirst: index == 0,
-                            isLast: index == viewModel.entries.count - 1,
-                            entry: $viewModel.entries[index],
-                            library: viewModel.wallpapers,
-                            moveUp: { viewModel.moveEntryUp(at: index) },
-                            moveDown: { viewModel.moveEntryDown(at: index) },
-                            remove: { viewModel.removeEntry(at: index) }
-                        )
-                    }
-                }
-                Button {
-                    viewModel.addEntry()
-                } label: {
-                    Label("Add Entry", systemImage: "plus")
-                }
-            }
-
-            Section("Multi-Display") {
-                Picker("Policy", selection: $viewModel.multiDisplayPolicy) {
-                    ForEach(MultiDisplayPolicy.allCases, id: \.self) { policy in
-                        Text(label(for: policy)).tag(policy)
-                    }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                if viewModel.multiDisplayPolicy == .perDisplay {
-                    if viewModel.displayAssignments.isEmpty {
-                        Text("Define wallpapers for individual displays.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(Array(viewModel.displayAssignments.indices), id: \.self) { index in
-                            DisplayAssignmentRow(
-                                index: index,
-                                isFirst: index == 0,
-                                isLast: index == viewModel.displayAssignments.count - 1,
-                                assignment: $viewModel.displayAssignments[index],
-                                library: viewModel.wallpapers,
-                                moveUp: { viewModel.moveDisplayAssignmentUp(at: index) },
-                                moveDown: { viewModel.moveDisplayAssignmentDown(at: index) },
-                                remove: { viewModel.removeDisplayAssignment(at: index) }
-                            )
+                GroupBox("Details") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        TextField("Playlist Name", text: $viewModel.name)
+                            .focused($focusedField, equals: .name)
+                        Stepper(
+                            value: $viewModel.intervalMinutes,
+                            in: 1...240,
+                            step: 5
+                        ) {
+                            Text("Rotation Interval: \(viewModel.intervalMinutes) minutes")
+                        }
+                        Picker("Playback Mode", selection: $viewModel.playbackMode) {
+                            ForEach(PlaylistPlaybackMode.allCases, id: \.self) { mode in
+                                Text(label(for: mode)).tag(mode)
+                            }
                         }
                     }
-                    Button {
-                        viewModel.addDisplayAssignment()
-                    } label: {
-                        Label("Add Display Assignment", systemImage: "plus.circle")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                GroupBox {
+                    VStack(alignment: .leading, spacing: 12) {
+                        entriesHeader
+                        if viewModel.entries.isEmpty {
+                            Text("Add wallpapers to start building this playlist.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(Array(viewModel.entries.indices), id: \.self) { index in
+                                PlaylistEntryRow(
+                                    index: index,
+                                    isFirst: index == 0,
+                                    isLast: index == viewModel.entries.count - 1,
+                                    entry: $viewModel.entries[index],
+                                    library: viewModel.wallpapers,
+                                    moveUp: { viewModel.moveEntryUp(at: index) },
+                                    moveDown: { viewModel.moveEntryDown(at: index) },
+                                    remove: { viewModel.removeEntry(at: index) }
+                                )
+                            }
+                        }
+                        Button {
+                            viewModel.addEntry()
+                        } label: {
+                            Label("Add Entry", systemImage: "plus")
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                GroupBox("Multi-Display") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Picker("Policy", selection: $viewModel.multiDisplayPolicy) {
+                            ForEach(MultiDisplayPolicy.allCases, id: \.self) { policy in
+                                Text(label(for: policy)).tag(policy)
+                            }
+                        }
+
+                        if viewModel.multiDisplayPolicy == .perDisplay {
+                            if viewModel.displayAssignments.isEmpty {
+                                Text("Define wallpapers for individual displays.")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(Array(viewModel.displayAssignments.indices), id: \.self) { index in
+                                    DisplayAssignmentRow(
+                                        index: index,
+                                        isFirst: index == 0,
+                                        isLast: index == viewModel.displayAssignments.count - 1,
+                                        assignment: $viewModel.displayAssignments[index],
+                                        library: viewModel.wallpapers,
+                                        moveUp: { viewModel.moveDisplayAssignmentUp(at: index) },
+                                        moveDown: { viewModel.moveDisplayAssignmentDown(at: index) },
+                                        remove: { viewModel.removeDisplayAssignment(at: index) }
+                                    )
+                                }
+                            }
+                            Button {
+                                viewModel.addDisplayAssignment()
+                            } label: {
+                                Label("Add Display Assignment", systemImage: "plus.circle")
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .navigationTitle(title)
         .toolbar {
@@ -117,7 +129,9 @@ struct PlaylistEditorView: View {
             }
         }
         .onAppear {
-            viewModel.refreshLibrary()
+            DispatchQueue.main.async {
+                viewModel.refreshLibrary()
+            }
         }
     }
 

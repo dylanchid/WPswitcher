@@ -1,10 +1,11 @@
 import AppKit
 import SwiftUI
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem?
     private var services: ServiceRegistry?
     private var mainWindowController: NSWindowController?
+    private let mainWindowFrameKey = "MainWindowFrame"
 
     func configure(with services: ServiceRegistry) {
         self.services = services
@@ -41,10 +42,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hostingController = NSHostingController(rootView: rootView)
         let window = NSWindow(contentViewController: hostingController)
         window.title = "WPswitcher"
-        window.setContentSize(NSSize(width: 980, height: 640))
+        if loadMainWindowFrame() == nil {
+            window.setContentSize(NSSize(width: 490, height: 320))
+        }
         window.setFrameAutosaveName("MainWindow")
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         window.isReleasedWhenClosed = false
+        window.delegate = self
 
         let controller = NSWindowController(window: window)
         mainWindowController = controller
@@ -53,11 +57,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showMainWindow() {
         guard let window = mainWindowController?.window else { return }
         NSApp.activate(ignoringOtherApps: true)
+        if let savedFrame = loadMainWindowFrame() {
+            DispatchQueue.main.async {
+                window.setFrame(savedFrame, display: false)
+            }
+        }
         window.makeKeyAndOrderFront(nil)
     }
 
     private func hideMainWindow() {
-        mainWindowController?.window?.orderOut(nil)
+        if let window = mainWindowController?.window {
+            saveMainWindowFrame(window.frame)
+            window.orderOut(nil)
+        }
     }
 
     @objc private func toggleMainWindow(_ sender: Any?) {
@@ -67,5 +79,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             showMainWindow()
         }
+    }
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        saveMainWindowFrame(sender.frame)
+        return true
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow else { return }
+        saveMainWindowFrame(window.frame)
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        if let window = mainWindowController?.window {
+            saveMainWindowFrame(window.frame)
+        }
+    }
+
+    func windowDidEndLiveResize(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow else { return }
+        saveMainWindowFrame(window.frame)
+    }
+
+
+    func windowDidMove(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow else { return }
+        saveMainWindowFrame(window.frame)
+    }
+
+    private func loadMainWindowFrame() -> NSRect? {
+        let defaults = UserDefaults.standard
+        guard let frameString = defaults.string(forKey: mainWindowFrameKey) else { return nil }
+        return NSRectFromString(frameString)
+    }
+
+    private func saveMainWindowFrame(_ frame: NSRect) {
+        let defaults = UserDefaults.standard
+        defaults.set(NSStringFromRect(frame), forKey: mainWindowFrameKey)
     }
 }

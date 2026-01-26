@@ -13,7 +13,7 @@ struct MainWindowView: View {
         } detail: {
             detailContent
         }
-        .frame(minWidth: 900, minHeight: 580)
+        .frame(minWidth: 450, minHeight: 320)
         .onAppear(perform: refreshPlaylists)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             refreshPlaylists()
@@ -194,7 +194,9 @@ private struct PlaylistEditorHost: View {
     var body: some View {
         PlaylistEditorView(viewModel: viewModel)
             .onChange(of: playlist) { newValue in
-                viewModel.applyUpdatedRecord(newValue)
+                DispatchQueue.main.async {
+                    viewModel.applyUpdatedRecord(newValue)
+                }
             }
     }
 }
@@ -240,9 +242,7 @@ struct WallpaperLibraryView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                header
-
+            VStack(alignment: .leading, spacing: 12) {
                 if let errorMessage {
                     Text(errorMessage)
                         .font(.footnote)
@@ -253,29 +253,11 @@ struct WallpaperLibraryView: View {
                 filmstripSection
                 Spacer(minLength: 0)
             }
-            .padding(24)
+            .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(Color(nsColor: .textBackgroundColor))
         .onAppear(perform: initialize)
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Wallpaper Library")
-                        .font(.largeTitle)
-                        .bold()
-                    Text("Browse, preview, and manage the wallpapers stored in WPswitcher.")
-                        .font(.callout)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-                controlButtons
-            }
-            Divider()
-        }
     }
 
     private var controlButtons: some View {
@@ -294,13 +276,24 @@ struct WallpaperLibraryView: View {
             }
             .disabled(isImporting)
         }
-        .controlSize(.large)
-        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .buttonStyle(.borderless)
+        .labelStyle(.iconOnly)
     }
 
     private var previewSection: some View {
-        previewContent
-            .frame(maxWidth: .infinity, minHeight: 260, maxHeight: 320)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Spacer()
+                controlButtons
+            }
+            HStack(alignment: .top, spacing: 16) {
+                previewContent
+                    .frame(width: 220, height: 150, alignment: .leading)
+                fileInfoSection
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
     }
 
     private var previewContent: some View {
@@ -318,10 +311,72 @@ struct WallpaperLibraryView: View {
         }
     }
 
+    private var fileInfoSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("File Info")
+                .font(.subheadline)
+
+            if let info = selectedFileInfo {
+                FileInfoRow(label: "File name", value: info.name)
+                if let createdAt = info.createdAt {
+                    FileInfoRow(label: "Created", value: Self.fileInfoDateFormatter.string(from: createdAt))
+                }
+                if let sizeBytes = info.sizeBytes {
+                    FileInfoRow(label: "Size", value: Self.byteFormatter.string(fromByteCount: sizeBytes))
+                }
+                if let fileType = info.fileType {
+                    FileInfoRow(label: "Type", value: fileType)
+                }
+            } else {
+                Text("Select a wallpaper to see file details.")
+                    .font(.callout)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    private var selectedFileInfo: FileInfo? {
+        switch previewSelection {
+        case .currentDesktop:
+            return fileInfo(for: currentWallpaperURL, fallbackCreatedAt: nil)
+        case .wallpaper:
+            guard let record = selectedWallpaper else { return nil }
+            return fileInfo(for: record.url, fallbackCreatedAt: record.createdAt)
+        }
+    }
+
+    private func fileInfo(for url: URL?, fallbackCreatedAt: Date?) -> FileInfo? {
+        guard let url else { return nil }
+        let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
+        let createdAt = (attributes?[.creationDate] as? Date) ?? fallbackCreatedAt
+        let sizeBytes = (attributes?[.size] as? NSNumber)?.int64Value
+        return FileInfo(
+            name: url.lastPathComponent,
+            createdAt: createdAt,
+            sizeBytes: sizeBytes,
+            fileType: url.pathExtension.isEmpty ? nil : url.pathExtension.uppercased(),
+            location: url.deletingLastPathComponent().path
+        )
+    }
+
+    private static let fileInfoDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
+    private static let byteFormatter: ByteCountFormatter = {
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useKB, .useMB, .useGB]
+        formatter.countStyle = .file
+        return formatter
+    }()
+
     private var filmstripSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 8) {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
+                HStack(spacing: 10) {
                     LibraryFilmstripItem(
                         title: "Current Desktop",
                         isSelected: previewSelection == .currentDesktop,
@@ -357,7 +412,7 @@ struct WallpaperLibraryView: View {
                     .disabled(isImporting)
                     .accessibilityLabel("Add Wallpapers")
                 }
-                .padding(.vertical, 4)
+                .padding(.vertical, 2)
             }
 
             if wallpapers.isEmpty {
@@ -495,6 +550,31 @@ private enum PreviewSelection: Equatable {
     case wallpaper(UUID)
 }
 
+private struct FileInfo: Equatable {
+    let name: String
+    let createdAt: Date?
+    let sizeBytes: Int64?
+    let fileType: String?
+    let location: String
+}
+
+private struct FileInfoRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Text(value)
+                .font(.callout)
+                .lineLimit(2)
+                .truncationMode(.middle)
+        }
+    }
+}
+
 private struct MissingPreviewPlaceholder: View {
     let message: String
 
@@ -523,7 +603,7 @@ private struct CurrentDesktopPreview: View {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()
-                    .padding(24)
+                    .padding(12)
             } else if isLoading {
                 ProgressView()
                     .controlSize(.large)
@@ -531,7 +611,7 @@ private struct CurrentDesktopPreview: View {
                 MissingPreviewPlaceholder(message: "Unable to load the current desktop wallpaper.")
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 }
 
@@ -547,7 +627,7 @@ private struct WallpaperPreview: View {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()
-                    .padding(24)
+                    .padding(12)
             } else if isMissing {
                 MissingPreviewPlaceholder(message: "This file can no longer be accessed.")
             } else {
@@ -563,7 +643,7 @@ private struct WallpaperPreview: View {
                     .padding()
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .onAppear(perform: loadImage)
         .onChange(of: record.id) { _ in
             image = nil
@@ -616,12 +696,12 @@ private struct LibraryFilmstripItem<Thumbnail: View>: View {
                     thumbnail()
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
-                .frame(width: 140, height: 88)
+                .frame(width: 70, height: 44)
 
                 Text(title)
-                    .font(.footnote)
+                    .font(.caption2)
                     .foregroundColor(.primary)
-                    .frame(width: 140)
+                    .frame(width: 70)
                     .lineLimit(1)
                     .truncationMode(.tail)
             }

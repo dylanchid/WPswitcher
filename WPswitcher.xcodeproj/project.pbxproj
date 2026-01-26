@@ -58,8 +58,8 @@
 		00B8AA1A2C7E7F2E00A5E9F1 /* CoreDataWallpaperService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataWallpaperService.swift; sourceTree = "<group>"; };
 		00B8AA1E2C7E7F2E00A5E9F1 /* CoreDataWallpaperServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataWallpaperServiceTests.swift; sourceTree = "<group>"; };
 		00B8AA202C7E7F2E00A5E9F1 /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
-		00B8AB302C7E7F2F00A5E9F1 /* PlaylistEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlaylistEditorView.swift; path = Views/PlaylistEditorView.swift; sourceTree = "<group>"; };
-		00B8AB322C7E7F2F00A5E9F1 /* PlaylistEditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlaylistEditorViewModel.swift; path = ViewModels/PlaylistEditorViewModel.swift; sourceTree = "<group>"; };
+		00B8AB302C7E7F2F00A5E9F1 /* PlaylistEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlaylistEditorView.swift; path = PlaylistEditorView.swift; sourceTree = "<group>"; };
+		00B8AB322C7E7F2F00A5E9F1 /* PlaylistEditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlaylistEditorViewModel.swift; path = PlaylistEditorViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -92,19 +92,50 @@
 		00B8A9A32C7E7F2C00A5E9F1 /* WPswitcher */ = {
 			isa = PBXGroup;
 			children = (
-				00B8A9A52C7E7F2C00A5E9F1 /* WPswitcherApp.swift */,
-				00B8A9A42C7E7F2C00A5E9F1 /* AppDelegate.swift */,
+				226A6F9BAD454FFB9E07FE96 /* App */,
 				00B8AA182C7E7F2D00A5E9F1 /* Models */,
 				00B8AA192C7E7F2D00A5E9F1 /* Persistence */,
 				00B8AA092C7E7F2D00A5E9F1 /* Services */,
+				C31F0DDA359249CA906CC64A /* Views */,
+				A9D53DF0E08947F289BE3FE6 /* ViewModels */,
+				FA81029BFF5049F0ABE70CFE /* Resources */,
+			);
+			path = WPswitcher;
+			sourceTree = "<group>";
+		};
+		226A6F9BAD454FFB9E07FE96 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				00B8A9A52C7E7F2C00A5E9F1 /* WPswitcherApp.swift */,
+				00B8A9A42C7E7F2C00A5E9F1 /* AppDelegate.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A9D53DF0E08947F289BE3FE6 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				00B8AB322C7E7F2F00A5E9F1 /* PlaylistEditorViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		C31F0DDA359249CA906CC64A /* Views */ = {
+			isa = PBXGroup;
+			children = (
 				00B8AA202C7E7F2E00A5E9F1 /* MainWindowView.swift */,
 				00B8AB302C7E7F2F00A5E9F1 /* PlaylistEditorView.swift */,
-				00B8AB322C7E7F2F00A5E9F1 /* PlaylistEditorViewModel.swift */,
 				00B8A9A72C7E7F2C00A5E9F1 /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		FA81029BFF5049F0ABE70CFE /* Resources */ = {
+			isa = PBXGroup;
+			children = (
 				00B8A9AC2C7E7F2C00A5E9F1 /* Assets.xcassets */,
 				00B8A9A62C7E7F2C00A5E9F1 /* Info.plist */,
 			);
-			path = WPswitcher;
 			sourceTree = "<group>";
 		};
 		00B8A9B42C7E7F2C00A5E9F1 = {
