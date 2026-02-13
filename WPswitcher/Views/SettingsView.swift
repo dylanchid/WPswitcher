@@ -42,7 +42,7 @@ struct SettingsView: View {
 
             if #available(macOS 13.0, *) {
                 Toggle("Launch at Login", isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { _, newValue in
+                    .onChange(of: launchAtLogin) { newValue in
                         updateLaunchAtLogin(enabled: newValue)
                     }
             }
