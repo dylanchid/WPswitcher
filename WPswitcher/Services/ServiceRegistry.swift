@@ -1,4 +1,4 @@
-import Combine
+import Foundation
 
 final class ServiceRegistry: ObservableObject {
     let persistence: PersistenceController
@@ -6,15 +6,18 @@ final class ServiceRegistry: ObservableObject {
     let playlistStore: PlaylistStore
     let schedulerCoordinator: SchedulerCoordinator
     let appearanceObserver: AppearanceObserver
+    let errorManager: ErrorManager
 
     init(
         persistence: PersistenceController = .shared,
         wallpaperService: WallpaperService? = nil,
         playlistStore: PlaylistStore? = nil,
         schedulerCoordinator: SchedulerCoordinator? = nil,
-        appearanceObserver: AppearanceObserver = DefaultAppearanceObserver()
+        appearanceObserver: AppearanceObserver = SystemAppearanceObserver(),
+        errorManager: ErrorManager = ErrorManager()
     ) {
         self.persistence = persistence
+        self.errorManager = errorManager
         let resolvedPlaylistStore = playlistStore ?? CoreDataPlaylistStore(persistence: persistence)
         let resolvedWallpaperService = wallpaperService ?? CoreDataWallpaperService(
             persistence: persistence,
@@ -38,6 +41,6 @@ final class ServiceRegistry: ObservableObject {
 
 extension ServiceRegistry {
     static let preview: ServiceRegistry = {
-        ServiceRegistry(persistence: .preview)
+        ServiceRegistry(persistence: .preview, errorManager: ErrorManager())
     }()
 }

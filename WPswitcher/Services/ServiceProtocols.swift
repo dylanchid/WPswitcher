@@ -13,29 +13,29 @@ enum WallpaperResolution {
 }
 
 protocol WallpaperService {
-    func advanceToNextWallpaper()
     @discardableResult func apply(entry: PlaylistEntryRecord, from playlist: PlaylistRecord) -> Bool
-    func toggleRotation()
-    func fetchLibrary() throws -> [WallpaperRecord]
-    @discardableResult func importWallpapers(from urls: [URL]) throws -> [WallpaperRecord]
-    func deleteWallpaper(id: UUID) throws
+    func fetchLibrary() async throws -> [WallpaperRecord]
+    @discardableResult func importWallpapers(from urls: [URL]) async throws -> [WallpaperRecord]
+    func deleteWallpaper(id: UUID) async throws
     func resolveAccess(for wallpaper: WallpaperRecord) -> WallpaperResolution
 }
 
 protocol PlaylistStore {
-    @discardableResult func createPlaylist(_ draft: PlaylistDraft) throws -> PlaylistRecord
-    func fetchPlaylists() throws -> [PlaylistRecord]
-    func fetchPlaylist(id: UUID) throws -> PlaylistRecord?
-    @discardableResult func updatePlaylist(_ draft: PlaylistDraft) throws -> PlaylistRecord
-    func deletePlaylist(id: UUID) throws
-    @discardableResult func upsertWallpaper(_ draft: WallpaperDraft) throws -> WallpaperRecord
+    @discardableResult func createPlaylist(_ draft: PlaylistDraft) async throws -> PlaylistRecord
+    func fetchPlaylists() async throws -> [PlaylistRecord]
+    func fetchPlaylist(id: UUID) async throws -> PlaylistRecord?
+    @discardableResult func updatePlaylist(_ draft: PlaylistDraft) async throws -> PlaylistRecord
+    func deletePlaylist(id: UUID) async throws
+    @discardableResult func upsertWallpaper(_ draft: WallpaperDraft) async throws -> WallpaperRecord
 }
 
 protocol SchedulerCoordinator {
     var isRunning: Bool { get }
+    var activePlaylistID: UUID? { get }
     func start()
     func pause()
     func toggleRotation()
+    func advance()
 }
 
 protocol AppearanceObserver {
@@ -49,10 +49,6 @@ enum PlaylistStoreError: Error {
 }
 
 final class DefaultWallpaperService: WallpaperService {
-    func advanceToNextWallpaper() {
-        os_log("Advance to next wallpaper (stub)")
-    }
-
     @discardableResult
     func apply(entry: PlaylistEntryRecord, from playlist: PlaylistRecord) -> Bool {
         os_log(
@@ -63,21 +59,17 @@ final class DefaultWallpaperService: WallpaperService {
         return false
     }
 
-    func toggleRotation() {
-        os_log("Toggle wallpaper rotation (stub)")
-    }
-
-    func fetchLibrary() throws -> [WallpaperRecord] {
+    func fetchLibrary() async throws -> [WallpaperRecord] {
         os_log("Fetch wallpaper library (stub)")
         return []
     }
 
-    func importWallpapers(from urls: [URL]) throws -> [WallpaperRecord] {
+    func importWallpapers(from urls: [URL]) async throws -> [WallpaperRecord] {
         os_log("Import wallpapers (stub) %{public}@", urls.description)
         return []
     }
 
-    func deleteWallpaper(id: UUID) throws {
+    func deleteWallpaper(id: UUID) async throws {
         os_log("Delete wallpaper (stub) %{public}@", id.uuidString)
     }
 
@@ -115,8 +107,10 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator {
     private var schedules: [UUID: PlaylistSchedule] = [:]
     private var sleepObserver: NSObjectProtocol?
     private var wakeObserver: NSObjectProtocol?
+    private var appearanceObserver: NSObjectProtocol?
     private var playlistObserver: NSObjectProtocol?
     private var running = false
+    private var currentPlaylistID: UUID?
 
     private let minimumInterval: TimeInterval = 5 // seconds
 
@@ -141,6 +135,10 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator {
 
     var isRunning: Bool {
         stateQueue.sync { running }
+    }
+
+    var activePlaylistID: UUID? {
+        stateQueue.sync { currentPlaylistID }
     }
 
     func start() {
@@ -187,6 +185,18 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator {
         }
     }
 
+    func advance() {
+        queue.async {
+            guard self.isRunning else { return }
+            self.logger.log("Manual advance requested")
+            // Advance all active schedules
+            for schedule in self.schedules.values {
+                self.performRotation(for: schedule, trigger: .manual)
+                self.rescheduleTimer(for: schedule, reason: .manualRefresh)
+            }
+        }
+    }
+
     // MARK: - Private helpers
 
     private func setRunning(_ newValue: Bool) {
@@ -197,37 +207,50 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator {
         playlist.entries.contains { $0.lightWallpaper != nil || $0.darkWallpaper != nil }
     }
 
-    private func rebuildSchedules(reason: ScheduleUpdateCause) {
+    private func rebuildSchedules(reason: DefaultSchedulerCoordinator.ScheduleUpdateCause) {
         guard isRunning else { return }
 
-        do {
-            let playlists = try playlistStore.fetchPlaylists()
-            let playable = playlists.filter(isPlaylistPlayable)
-            logger.log("Rebuilding schedules for \(playable.count, privacy: .public) playlists (reason: \(reason.rawValue, privacy: .public))")
-
-            let incomingIds = Set(playable.map(\.id))
-            let existingIds = Set(schedules.keys)
-            let removed = existingIds.subtracting(incomingIds)
-
-            for identifier in removed {
-                if let schedule = schedules.removeValue(forKey: identifier) {
-                    schedule.cancelTimer()
-                    logger.log("Removed schedule for playlist \(schedule.record.name, privacy: .public)")
+        Task {
+            do {
+                let playlists = try await playlistStore.fetchPlaylists()
+                
+                // Jump back to serial queue for state updates
+                queue.async {
+                    self.applyNewSchedules(playlists, reason: reason)
+                }
+            } catch {
+                queue.async {
+                    self.logger.error("Failed to rebuild schedules: \(error.localizedDescription, privacy: .public)")
                 }
             }
+        }
+    }
+    
+    // Extracted logic to run on queue
+    private func applyNewSchedules(_ playlists: [PlaylistRecord], reason: DefaultSchedulerCoordinator.ScheduleUpdateCause) {
+        let playable = playlists.filter(isPlaylistPlayable)
+        logger.log("Rebuilding schedules for \(playable.count, privacy: .public) playlists (reason: \(reason.rawValue, privacy: .public))")
 
-            for record in playable {
-                let schedule = schedules[record.id] ?? PlaylistSchedule(record: record)
-                schedule.update(with: record)
-                schedules[record.id] = schedule
-                rescheduleTimer(for: schedule, reason: reason)
+        let incomingIds = Set(playable.map(\.id))
+        let existingIds = Set(schedules.keys)
+        let removed = existingIds.subtracting(incomingIds)
+
+        for identifier in removed {
+            if let schedule = schedules.removeValue(forKey: identifier) {
+                schedule.cancelTimer()
+                logger.log("Removed schedule for playlist \(schedule.record.name, privacy: .public)")
             }
-        } catch {
-            logger.error("Failed to rebuild schedules: \(error.localizedDescription, privacy: .public)")
+        }
+
+        for record in playable {
+            let schedule = schedules[record.id] ?? PlaylistSchedule(record: record)
+            schedule.update(with: record)
+            schedules[record.id] = schedule
+            rescheduleTimer(for: schedule, reason: reason)
         }
     }
 
-    private func rescheduleTimer(for schedule: PlaylistSchedule, reason: ScheduleUpdateCause) {
+    private func rescheduleTimer(for schedule: PlaylistSchedule, reason: DefaultSchedulerCoordinator.ScheduleUpdateCause) {
         schedule.cancelTimer()
 
         guard isRunning else { return }
@@ -279,7 +302,7 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator {
         performRotation(for: schedule, trigger: .timer)
     }
 
-    private func performRotation(for schedule: PlaylistSchedule, trigger: RotationTrigger) {
+    private func performRotation(for schedule: PlaylistSchedule, trigger: DefaultSchedulerCoordinator.RotationTrigger) {
         guard isRunning else { return }
         guard let entry = schedule.nextEntry() else {
             logger.warning("No playable entry available for playlist \(schedule.record.name, privacy: .public); trigger \(trigger.rawValue, privacy: .public)")
@@ -290,6 +313,7 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator {
         let applied = wallpaperService.apply(entry: entry, from: schedule.record)
 
         if applied {
+            currentPlaylistID = schedule.id
             if let wallpaper = preview {
                 logger.log(
                     "Rotated playlist \(schedule.record.name, privacy: .public) to wallpaper \(wallpaper.displayName, privacy: .public) (trigger \(trigger.rawValue, privacy: .public))"
@@ -355,8 +379,16 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator {
         ) { [weak self] _ in
             self?.handleWorkspaceDidWake()
         }
+        
+        appearanceObserver = workspaceNotificationCenter.addObserver(
+            forName: .appearanceDidChange,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            self?.handleAppearanceDidChange()
+        }
 
-        logger.log("Registered workspace sleep/wake observers")
+        logger.log("Registered workspace sleep/wake and appearance observers")
     }
 
     private func unsubscribeFromWorkspaceNotifications() {
@@ -367,6 +399,10 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator {
         if let wakeObserver {
             workspaceNotificationCenter.removeObserver(wakeObserver)
             self.wakeObserver = nil
+        }
+        if let appearanceObserver {
+            workspaceNotificationCenter.removeObserver(appearanceObserver)
+            self.appearanceObserver = nil
         }
     }
 
@@ -387,6 +423,18 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator {
             guard self.isRunning else { return }
             self.logger.log("Workspace woke from sleep; rebuilding schedules")
             self.rebuildSchedules(reason: .wake)
+        }
+    }
+
+    private func handleAppearanceDidChange() {
+        queue.async {
+            guard self.isRunning else { return }
+            self.logger.log("Appearance changed; refreshing current wallpapers")
+            for schedule in self.schedules.values {
+                if let entry = schedule.currentEntry() {
+                    self.wallpaperService.apply(entry: entry, from: schedule.record)
+                }
+            }
         }
     }
 
@@ -455,6 +503,11 @@ private final class PlaylistSchedule {
 
     var hasPlayableEntries: Bool {
         !validEntries.isEmpty
+    }
+
+    func currentEntry() -> PlaylistEntryRecord? {
+        guard let lastPlayedEntryID else { return nil }
+        return validEntries.first { $0.id == lastPlayedEntryID }
     }
 
     func update(with record: PlaylistRecord) {

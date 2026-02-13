@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct PlaylistEditorView: View {
-    @StateObject private var viewModel: PlaylistEditorViewModel
+    @ObservedObject private var viewModel: PlaylistEditorViewModel
     @FocusState private var focusedField: Field?
 
     private enum Field: Hashable {
@@ -9,12 +9,12 @@ struct PlaylistEditorView: View {
     }
 
     init(viewModel: PlaylistEditorViewModel) {
-        _viewModel = StateObject(wrappedValue: viewModel)
+        _viewModel = ObservedObject(wrappedValue: viewModel)
     }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
                 if let error = viewModel.errorMessage {
                     Text(error)
                         .font(.footnote)
@@ -22,29 +22,43 @@ struct PlaylistEditorView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                GroupBox("Details") {
+                SectionCard(title: "Details") {
                     VStack(alignment: .leading, spacing: 12) {
-                        TextField("Playlist Name", text: $viewModel.name)
-                            .focused($focusedField, equals: .name)
-                        Stepper(
-                            value: $viewModel.intervalMinutes,
-                            in: 1...240,
-                            step: 5
-                        ) {
-                            Text("Rotation Interval: \(viewModel.intervalMinutes) minutes")
+                        LabeledContent("Playlist Name") {
+                            TextField("Untitled", text: $viewModel.name)
+                                .focused($focusedField, equals: .name)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(maxWidth: 240)
                         }
-                        Picker("Playback Mode", selection: $viewModel.playbackMode) {
-                            ForEach(PlaylistPlaybackMode.allCases, id: \.self) { mode in
-                                Text(label(for: mode)).tag(mode)
+
+                        LabeledContent("Rotation Interval") {
+                            Stepper(
+                                value: $viewModel.intervalMinutes,
+                                in: 1...240,
+                                step: 5
+                            ) {
+                                Text("\(viewModel.intervalMinutes) min")
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
                             }
+                            .controlSize(.small)
+                        }
+
+                        LabeledContent("Playback Mode") {
+                            Picker("Playback Mode", selection: $viewModel.playbackMode) {
+                                ForEach(PlaylistPlaybackMode.allCases, id: \.self) { mode in
+                                    Text(label(for: mode)).tag(mode)
+                                }
+                            }
+                            .labelsHidden()
+                            .controlSize(.small)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                GroupBox {
+                SectionCard(title: "Entries", trailing: "\(viewModel.entries.count)") {
                     VStack(alignment: .leading, spacing: 12) {
-                        entriesHeader
                         if viewModel.entries.isEmpty {
                             Text("Add wallpapers to start building this playlist.")
                                 .font(.footnote)
@@ -68,16 +82,21 @@ struct PlaylistEditorView: View {
                         } label: {
                             Label("Add Entry", systemImage: "plus")
                         }
+                        .controlSize(.small)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                GroupBox("Multi-Display") {
+                SectionCard(title: "Multi-Display") {
                     VStack(alignment: .leading, spacing: 12) {
-                        Picker("Policy", selection: $viewModel.multiDisplayPolicy) {
-                            ForEach(MultiDisplayPolicy.allCases, id: \.self) { policy in
-                                Text(label(for: policy)).tag(policy)
+                        LabeledContent("Policy") {
+                            Picker("Policy", selection: $viewModel.multiDisplayPolicy) {
+                                ForEach(MultiDisplayPolicy.allCases, id: \.self) { policy in
+                                    Text(label(for: policy)).tag(policy)
+                                }
                             }
+                            .labelsHidden()
+                            .controlSize(.small)
                         }
 
                         if viewModel.multiDisplayPolicy == .perDisplay {
@@ -104,6 +123,7 @@ struct PlaylistEditorView: View {
                             } label: {
                                 Label("Add Display Assignment", systemImage: "plus.circle")
                             }
+                            .controlSize(.small)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -158,16 +178,6 @@ struct PlaylistEditorView: View {
         }
     }
 
-    private var entriesHeader: some View {
-        HStack {
-            Text("Playlist Entries")
-                .font(.headline)
-            Spacer()
-            Text("\(viewModel.entries.count)")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-    }
 }
 
 private struct PlaylistEntryRow: View {
@@ -216,7 +226,15 @@ private struct PlaylistEntryRow: View {
                 library: library
             )
         }
-        .padding(.vertical, 4)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(nsColor: .textBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.35), lineWidth: 1)
+        )
     }
 }
 
@@ -267,7 +285,15 @@ private struct DisplayAssignmentRow: View {
                 library: library
             )
         }
-        .padding(.vertical, 4)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(nsColor: .textBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.35), lineWidth: 1)
+        )
     }
 }
 
@@ -313,5 +339,42 @@ private struct WallpaperPicker: View {
             return "Select…"
         }
         return record.displayName
+    }
+}
+
+private struct SectionCard<Content: View>: View {
+    let title: String
+    let trailing: String?
+    @ViewBuilder let content: () -> Content
+
+    init(title: String, trailing: String? = nil, @ViewBuilder content: @escaping () -> Content) {
+        self.title = title
+        self.trailing = trailing
+        self.content = content
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(title)
+                    .font(.headline)
+                Spacer()
+                if let trailing {
+                    Text(trailing)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            content()
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 1)
+        )
     }
 }

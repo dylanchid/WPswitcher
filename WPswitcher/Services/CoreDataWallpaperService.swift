@@ -2,14 +2,13 @@ import AppKit
 import CoreData
 import Foundation
 import os.log
+import UniformTypeIdentifiers
 
 final class CoreDataWallpaperService: WallpaperService {
     private let persistence: PersistenceController
     private let playlistStore: PlaylistStore
     private let fileManager: FileManager
     private let logger = Logger(subsystem: "com.example.WPswitcher", category: "WallpaperService")
-
-    private let supportedExtensions: Set<String> = ["jpg", "jpeg", "png", "heic", "heif", "tiff", "gif", "bmp"]
 
     init(
         persistence: PersistenceController,
@@ -21,13 +20,9 @@ final class CoreDataWallpaperService: WallpaperService {
         self.fileManager = fileManager
     }
 
-    func advanceToNextWallpaper() {
-        logger.log("advanceToNextWallpaper invoked – not yet implemented")
-    }
-
     @discardableResult
     func apply(entry: PlaylistEntryRecord, from playlist: PlaylistRecord) -> Bool {
-        let screens = NSScreen.screens
+        let screens = getScreens()
         guard !screens.isEmpty else {
             logger.error("No screens available to apply wallpaper for playlist \(playlist.name, privacy: .public)")
             return false
@@ -67,9 +62,6 @@ final class CoreDataWallpaperService: WallpaperService {
             }
 
             if !appliedAny, let fallback = defaultWallpaper {
-                logger.log(
-                    "Falling back to default entry wallpaper for playlist \(playlist.name, privacy: .public) on all screens"
-                )
                 appliedAny = apply(wallpaper: fallback, to: screens, playlistName: playlist.name)
             }
         }
@@ -87,45 +79,34 @@ final class CoreDataWallpaperService: WallpaperService {
         return appliedAny
     }
 
-    func toggleRotation() {
-        logger.log("toggleRotation invoked – not yet implemented")
-    }
-
-    func fetchLibrary() throws -> [WallpaperRecord] {
-        let context = persistence.viewContext
-        var records: [WallpaperRecord] = []
-        var capturedError: Error?
-
-        context.performAndWait {
-            do {
-                let request = WallpaperEntity.fetchRequest()
-                request.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: true)]
-                records = try context.fetch(request).map { $0.toRecord() }
-            } catch {
-                capturedError = error
-            }
+    func fetchLibrary() async throws -> [WallpaperRecord] {
+        let context = persistence.newBackgroundContext()
+        
+        return try await context.perform {
+            let request = WallpaperEntity.fetchRequest()
+            request.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: true)]
+            return try context.fetch(request).map { $0.toRecord() }
         }
-
-        if let capturedError {
-            throw capturedError
-        }
-
-        return records
     }
 
     @discardableResult
-    func importWallpapers(from urls: [URL]) throws -> [WallpaperRecord] {
+    func importWallpapers(from urls: [URL]) async throws -> [WallpaperRecord] {
         let resolvedFiles = collectImageFiles(from: urls)
-        guard !resolvedFiles.isEmpty else { return [] }
+        guard !resolvedFiles.isEmpty else { 
+            throw AppError.wallpaperImportFailed("No valid image files found")
+        }
 
         var imported: [WallpaperRecord] = []
         var errors: [Error] = []
 
         for fileURL in resolvedFiles {
             do {
+                // Validate file before importing
+                try validateImageFile(at: fileURL)
+                
                 let bookmark = try createBookmark(for: fileURL)
                 let draft = WallpaperDraft(url: fileURL, displayName: fileURL.lastPathComponent, bookmarkData: bookmark)
-                let record = try playlistStore.upsertWallpaper(draft)
+                let record = try await playlistStore.upsertWallpaper(draft)
                 imported.append(record)
             } catch {
                 logger.error("Failed to import wallpaper at \(fileURL, privacy: .public): \(error.localizedDescription, privacy: .public)")
@@ -133,34 +114,67 @@ final class CoreDataWallpaperService: WallpaperService {
             }
         }
 
-        if let error = errors.first {
-            throw error
+        if !errors.isEmpty && imported.isEmpty {
+            // If all imports failed, throw the first error
+            throw errors.first!
         }
 
         return imported
     }
 
-    func deleteWallpaper(id: UUID) throws {
-        let context = persistence.viewContext
-        var capturedError: Error?
+    private func validateImageFile(at url: URL) throws {
+        // Check file existence
+        guard fileManager.fileExists(atPath: url.path) else {
+            throw AppError.fileAccessDenied(url.path)
+        }
 
-        context.performAndWait {
+        // Check file size (prevent importing extremely large files)
+        let attributes = try fileManager.attributesOfItem(atPath: url.path)
+        guard let fileSize = attributes[.size] as? Int64 else {
+            throw AppError.invalidImageData(url.lastPathComponent)
+        }
+        
+        let maxFileSize: Int64 = 100 * 1024 * 1024 // 100MB limit
+        guard fileSize <= maxFileSize else {
+            throw AppError.wallpaperImportFailed("File too large: \(ByteCountFormatter.string(fromByteCount: fileSize, countStyle: .file))")
+        }
+
+        // Validate image can be loaded
+        guard let imageSource = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let imageProperties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [String: Any] else {
+            throw AppError.invalidImageData(url.lastPathComponent)
+        }
+
+        // Check image dimensions
+        guard let pixelWidth = imageProperties[kCGImagePropertyPixelWidth as String] as? Int,
+              let pixelHeight = imageProperties[kCGImagePropertyPixelHeight as String] as? Int else {
+            throw AppError.invalidImageData(url.lastPathComponent)
+        }
+
+        // Minimum resolution check (at least 100x100)
+        guard pixelWidth >= 100 && pixelHeight >= 100 else {
+            throw AppError.wallpaperImportFailed("Image too small: \(pixelWidth)x\(pixelHeight). Minimum size is 100x100.")
+        }
+
+        // Maximum resolution check (prevent extremely large images)
+        let maxDimension = 16384 // macOS wallpaper limit
+        guard pixelWidth <= maxDimension && pixelHeight <= maxDimension else {
+            throw AppError.wallpaperImportFailed("Image too large: \(pixelWidth)x\(pixelHeight). Maximum size is \(maxDimension)x\(maxDimension).")
+        }
+    }
+
+    func deleteWallpaper(id: UUID) async throws {
+        let context = persistence.newBackgroundContext()
+        
+        try await context.perform {
             let request = WallpaperEntity.fetchRequest()
             request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
             request.fetchLimit = 1
 
-            do {
-                if let entity = try context.fetch(request).first {
-                    context.delete(entity)
-                    try context.save()
-                }
-            } catch {
-                capturedError = error
+            if let entity = try context.fetch(request).first {
+                context.delete(entity)
+                try context.save()
             }
-        }
-
-        if let capturedError {
-            throw capturedError
         }
     }
 
@@ -223,6 +237,8 @@ final class CoreDataWallpaperService: WallpaperService {
         return Array(collected)
     }
 
+    private let supportedExtensions = ["jpg", "jpeg", "png", "gif", "bmp", "tiff", "webp", "heic", "heif"]
+
     private func isSupportedImage(_ url: URL) -> Bool {
         guard supportedExtensions.contains(url.pathExtension.lowercased()) else { return false }
         return true
@@ -250,23 +266,37 @@ final class CoreDataWallpaperService: WallpaperService {
         }
     }
 
+    private func getScreens() -> [NSScreen] {
+        if Thread.isMainThread {
+            return NSScreen.screens
+        } else {
+            return DispatchQueue.main.sync { NSScreen.screens }
+        }
+    }
+
+    private func apply(wallpaper: WallpaperRecord, to screens: [NSScreen], playlistName: String) -> Bool {
+        var appliedAny = false
+        for screen in screens {
+            if apply(wallpaper: wallpaper, to: screen, playlistName: playlistName) {
+                appliedAny = true
+            }
+        }
+        return appliedAny
+    }
+
     private func wallpaper(for entry: PlaylistEntryRecord, preferDark: Bool) -> WallpaperRecord? {
         if preferDark {
             return entry.darkWallpaper ?? entry.lightWallpaper
+        } else {
+            return entry.lightWallpaper ?? entry.darkWallpaper
         }
-        return entry.lightWallpaper ?? entry.darkWallpaper
     }
 
     private func wallpaper(for assignment: DisplayAssignmentRecord, preferDark: Bool) -> WallpaperRecord? {
         if preferDark {
             return assignment.darkWallpaper ?? assignment.lightWallpaper
-        }
-        return assignment.lightWallpaper ?? assignment.darkWallpaper
-    }
-
-    private func apply(wallpaper: WallpaperRecord, to screens: [NSScreen], playlistName: String) -> Bool {
-        screens.reduce(false) { partialResult, screen in
-            apply(wallpaper: wallpaper, to: screen, playlistName: playlistName) || partialResult
+        } else {
+            return assignment.lightWallpaper ?? assignment.darkWallpaper
         }
     }
 

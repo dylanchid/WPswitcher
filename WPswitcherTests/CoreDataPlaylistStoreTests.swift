@@ -17,9 +17,9 @@ final class CoreDataPlaylistStoreTests: XCTestCase {
         try super.tearDownWithError()
     }
 
-    func testCreateAndFetchPlaylist() throws {
-        let light = try store.upsertWallpaper(WallpaperDraft(url: URL(fileURLWithPath: "/tmp/one.jpg"), displayName: "One", bookmarkData: nil))
-        let dark = try store.upsertWallpaper(WallpaperDraft(url: URL(fileURLWithPath: "/tmp/two.jpg"), displayName: "Two", bookmarkData: nil))
+    func testCreateAndFetchPlaylist() async throws {
+        let light = try await store.upsertWallpaper(WallpaperDraft(url: URL(fileURLWithPath: "/tmp/one.jpg"), displayName: "One", bookmarkData: nil))
+        let dark = try await store.upsertWallpaper(WallpaperDraft(url: URL(fileURLWithPath: "/tmp/two.jpg"), displayName: "Two", bookmarkData: nil))
 
         let draft = PlaylistDraft(
             id: nil,
@@ -33,8 +33,8 @@ final class CoreDataPlaylistStoreTests: XCTestCase {
             displayAssignments: []
         )
 
-        let created = try store.createPlaylist(draft)
-        let fetched = try store.fetchPlaylists()
+        let created = try await store.createPlaylist(draft)
+        let fetched = try await store.fetchPlaylists()
 
         XCTAssertEqual(fetched.count, 1)
         XCTAssertEqual(fetched.first?.id, created.id)
@@ -43,10 +43,10 @@ final class CoreDataPlaylistStoreTests: XCTestCase {
         XCTAssertEqual(fetched.first?.entries.first?.darkWallpaper?.id, dark.id)
     }
 
-    func testUpdatePlaylistAppliesChanges() throws {
-        let wallOne = try store.upsertWallpaper(WallpaperDraft(url: URL(fileURLWithPath: "/tmp/one.jpg"), displayName: "One", bookmarkData: nil))
-        let wallTwo = try store.upsertWallpaper(WallpaperDraft(url: URL(fileURLWithPath: "/tmp/two.jpg"), displayName: "Two", bookmarkData: nil))
-        let wallThree = try store.upsertWallpaper(WallpaperDraft(url: URL(fileURLWithPath: "/tmp/three.jpg"), displayName: "Three", bookmarkData: nil))
+    func testUpdatePlaylistAppliesChanges() async throws {
+        let wallOne = try await store.upsertWallpaper(WallpaperDraft(url: URL(fileURLWithPath: "/tmp/one.jpg"), displayName: "One", bookmarkData: nil))
+        let wallTwo = try await store.upsertWallpaper(WallpaperDraft(url: URL(fileURLWithPath: "/tmp/two.jpg"), displayName: "Two", bookmarkData: nil))
+        let wallThree = try await store.upsertWallpaper(WallpaperDraft(url: URL(fileURLWithPath: "/tmp/three.jpg"), displayName: "Three", bookmarkData: nil))
 
         let initial = PlaylistDraft(
             id: nil,
@@ -60,7 +60,7 @@ final class CoreDataPlaylistStoreTests: XCTestCase {
             displayAssignments: []
         )
 
-        let created = try store.createPlaylist(initial)
+        let created = try await store.createPlaylist(initial)
         let updatedDraft = PlaylistDraft(
             id: created.id,
             name: "Evening",
@@ -76,7 +76,7 @@ final class CoreDataPlaylistStoreTests: XCTestCase {
             ]
         )
 
-        let updated = try store.updatePlaylist(updatedDraft)
+        let updated = try await store.updatePlaylist(updatedDraft)
 
         XCTAssertEqual(updated.name, "Evening")
         XCTAssertEqual(updated.intervalMinutes, 45)
@@ -89,7 +89,7 @@ final class CoreDataPlaylistStoreTests: XCTestCase {
         XCTAssertEqual(updated.displayAssignments.first?.displayID, "DISPLAY-1")
     }
 
-    func testFetchPlaylistByIdentifier() throws {
+    func testFetchPlaylistByIdentifier() async throws {
         let draft = PlaylistDraft(
             id: nil,
             name: "Sample",
@@ -100,15 +100,15 @@ final class CoreDataPlaylistStoreTests: XCTestCase {
             displayAssignments: []
         )
 
-        let created = try store.createPlaylist(draft)
-        let fetched = try store.fetchPlaylist(id: created.id)
+        let created = try await store.createPlaylist(draft)
+        let fetched = try await store.fetchPlaylist(id: created.id)
 
         XCTAssertNotNil(fetched)
         XCTAssertEqual(fetched?.id, created.id)
         XCTAssertEqual(fetched?.name, "Sample")
     }
 
-    func testUpdatePlaylistWithoutIdentifierThrows() throws {
+    func testUpdatePlaylistWithoutIdentifierThrows() async throws {
         let draft = PlaylistDraft(
             id: nil,
             name: "Nameless",
@@ -119,15 +119,17 @@ final class CoreDataPlaylistStoreTests: XCTestCase {
             displayAssignments: []
         )
 
-        XCTAssertThrowsError(try store.updatePlaylist(draft)) { error in
-            guard case PlaylistStoreError.invalidDraft = error else {
-                XCTFail("Unexpected error \(error)")
-                return
-            }
+        do {
+            _ = try await store.updatePlaylist(draft)
+            XCTFail("Should have thrown invalidDraft error")
+        } catch PlaylistStoreError.invalidDraft {
+            // Success
+        } catch {
+            XCTFail("Unexpected error: \(error)")
         }
     }
 
-    func testDeletePlaylistRemovesEntity() throws {
+    func testDeletePlaylistRemovesEntity() async throws {
         let draft = PlaylistDraft(
             id: nil,
             name: "Temp",
@@ -138,22 +140,22 @@ final class CoreDataPlaylistStoreTests: XCTestCase {
             displayAssignments: []
         )
 
-        let playlist = try store.createPlaylist(draft)
-        try store.deletePlaylist(id: playlist.id)
+        let playlist = try await store.createPlaylist(draft)
+        try await store.deletePlaylist(id: playlist.id)
 
-        let playlists = try store.fetchPlaylists()
+        let playlists = try await store.fetchPlaylists()
         XCTAssertTrue(playlists.isEmpty)
     }
 
-    func testUpsertWallpaperCreatesAndUpdatesRecord() throws {
+    func testUpsertWallpaperCreatesAndUpdatesRecord() async throws {
         let url = URL(fileURLWithPath: "/tmp/shared.jpg")
         let draft = WallpaperDraft(url: url, displayName: "Original", bookmarkData: nil)
-        let created = try store.upsertWallpaper(draft)
+        let created = try await store.upsertWallpaper(draft)
 
         XCTAssertEqual(created.url, url)
         XCTAssertEqual(created.displayName, "Original")
 
-        let updated = try store.upsertWallpaper(WallpaperDraft(url: url, displayName: "Updated", bookmarkData: nil))
+        let updated = try await store.upsertWallpaper(WallpaperDraft(url: url, displayName: "Updated", bookmarkData: nil))
         XCTAssertEqual(created.id, updated.id)
         XCTAssertEqual(updated.displayName, "Updated")
     }

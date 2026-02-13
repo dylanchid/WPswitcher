@@ -121,12 +121,14 @@ final class PlaylistEditorViewModel: ObservableObject {
     }
 
     func refreshLibrary() {
-        do {
-            let libraryRecords = try wallpaperService.fetchLibrary()
-            errorMessage = nil
-            refreshWallpapersCache(using: lastKnownRecord, library: libraryRecords)
-        } catch {
-            errorMessage = error.localizedDescription
+        Task {
+            do {
+                let libraryRecords = try await wallpaperService.fetchLibrary()
+                errorMessage = nil
+                refreshWallpapersCache(using: lastKnownRecord, library: libraryRecords)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -217,26 +219,28 @@ final class PlaylistEditorViewModel: ObservableObject {
             displayAssignments: assignmentDrafts
         )
 
-        do {
-            let record: PlaylistRecord
-            if playlistId == nil {
-                record = try playlistStore.createPlaylist(draft)
-                playlistId = record.id
-            } else {
-                record = try playlistStore.updatePlaylist(draft)
+        Task {
+            do {
+                let record: PlaylistRecord
+                if playlistId == nil {
+                    record = try await playlistStore.createPlaylist(draft)
+                    playlistId = record.id
+                } else {
+                    record = try await playlistStore.updatePlaylist(draft)
+                }
+
+                lastKnownRecord = record
+                onSave(record)
+                collapseIntoSnapshot(record: record)
+                seedWallpapers(from: record)
+                refreshLibrary()
+                hasUnsavedChanges = false
+            } catch {
+                errorMessage = error.localizedDescription
             }
 
-            lastKnownRecord = record
-            onSave(record)
-            collapseIntoSnapshot(record: record)
-            seedWallpapers(from: record)
-            refreshLibrary()
-            hasUnsavedChanges = false
-        } catch {
-            errorMessage = error.localizedDescription
+            isSaving = false
         }
-
-        isSaving = false
     }
 
     func applyUpdatedRecord(_ record: PlaylistRecord) {

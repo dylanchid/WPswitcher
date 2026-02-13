@@ -26,19 +26,19 @@ final class CoreDataWallpaperServiceTests: XCTestCase {
         try super.tearDownWithError()
     }
 
-    func testImportSingleWallpaperCreatesBookmark() throws {
+    func testImportSingleWallpaperCreatesBookmark() async throws {
         let fileURL = try makeTestImage(named: "sample")
-        let records = try service.importWallpapers(from: [fileURL])
+        let records = try await service.importWallpapers(from: [fileURL])
         XCTAssertEqual(records.count, 1)
         XCTAssertNotNil(records.first?.bookmarkData)
 
-        let fetched = try service.fetchLibrary()
+        let fetched = try await service.fetchLibrary()
         XCTAssertEqual(fetched.first?.id, records.first?.id)
     }
 
-    func testResolveAccessDetectsMissingFile() throws {
+    func testResolveAccessDetectsMissingFile() async throws {
         let fileURL = try makeTestImage(named: "toDelete")
-        let records = try service.importWallpapers(from: [fileURL])
+        let records = try await service.importWallpapers(from: [fileURL])
         XCTAssertEqual(records.count, 1)
         let record = records[0]
 
