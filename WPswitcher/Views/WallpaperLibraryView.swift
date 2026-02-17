@@ -19,12 +19,12 @@ struct WallpaperLibraryView: View {
     var body: some View {
         ZStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    previewSection
+                VStack(alignment: .leading, spacing: 0) {
+                    // Top: current wallpaper (left) + file details (right)
+                    mainContentSection
+                    // Bottom: horizontal swipeable thumbnails
                     filmstripSection
-                    Spacer(minLength: 0)
                 }
-                .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .background(Color(nsColor: .textBackgroundColor))
@@ -55,19 +55,35 @@ struct WallpaperLibraryView: View {
         .labelStyle(.iconOnly)
     }
 
-    private var previewSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Spacer()
-                controlButtons
-            }
-            HStack(alignment: .top, spacing: 16) {
+    /// Main content: large current wallpaper on the left, photo/file details on the right.
+    private var mainContentSection: some View {
+        HStack(alignment: .top, spacing: 20) {
+            // Left: current wallpaper — large preview
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text("Current Wallpaper")
+                        .font(.headline)
+                    Spacer()
+                    controlButtons
+                }
                 previewContent
-                    .frame(width: 220, height: 150, alignment: .leading)
-                fileInfoSection
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(minHeight: 280)
+                    .frame(maxWidth: .infinity)
+                    .background(Color(nsColor: .controlBackgroundColor).opacity(0.5), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
+            .frame(maxWidth: .infinity)
+
+            // Right: photo or file details
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Details")
+                    .font(.headline)
+                fileInfoSection
+            }
+            .frame(width: 220, alignment: .topLeading)
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
     }
 
     private var previewContent: some View {
@@ -147,9 +163,15 @@ struct WallpaperLibraryView: View {
         return formatter
     }()
 
+    /// Horizontal list of thumbnails; user can swipe or scroll to browse. Compact so it fits in default window below the photo.
     private var filmstripSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ScrollView(.horizontal, showsIndicators: false) {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Library")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 16)
+
+            ScrollView(.horizontal, showsIndicators: true) {
                 HStack(spacing: 10) {
                     LibraryFilmstripItem(
                         title: "Current Desktop",
@@ -177,7 +199,7 @@ struct WallpaperLibraryView: View {
                     }
 
                     LibraryFilmstripItem(
-                        title: "",
+                        title: "Add",
                         isSelected: false,
                         action: importWallpapers
                     ) {
@@ -186,13 +208,19 @@ struct WallpaperLibraryView: View {
                     .disabled(isImporting)
                     .accessibilityLabel("Add Wallpapers")
                 }
-                .padding(.vertical, 2)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
             }
+            .frame(height: 56)
+            .background(Color(nsColor: .windowBackgroundColor))
+            .padding(.bottom, 10)
 
             if wallpapers.isEmpty {
                 Text("Import wallpapers to start building your library.")
                     .font(.footnote)
                     .foregroundColor(.secondary)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 10)
             }
         }
     }

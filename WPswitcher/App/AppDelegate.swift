@@ -43,10 +43,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let window = NSWindow(contentViewController: hostingController)
         window.title = "WPswitcher"
         if loadMainWindowFrame() == nil {
-            window.setContentSize(NSSize(width: 490, height: 320))
+            window.setContentSize(NSSize(width: 640, height: 400))
         }
         window.setFrameAutosaveName("MainWindow")
-        window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+        // Borderless: no title bar, no traffic lights, content only. Show/hide via menu bar icon.
+        window.styleMask = [.borderless]
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.hasShadow = true
+        window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
         window.delegate = self
 

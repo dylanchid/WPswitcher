@@ -6,14 +6,30 @@ struct MainWindowView: View {
     @State private var selection: MainDestination? = .library
     @State private var playlists: [PlaylistRecord] = []
     @State private var playlistError: String?
+    /// Sidebar closed by default; toggled via toolbar button.
+    @State private var sidebarVisibility: NavigationSplitViewVisibility = .detailOnly
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $sidebarVisibility) {
             sidebar
         } detail: {
             detailContent
+                .toolbar {
+                    ToolbarItem(placement: .navigation) {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                sidebarVisibility = sidebarVisibility == .detailOnly ? .doubleColumn : .detailOnly
+                            }
+                        } label: {
+                            Image(systemName: "sidebar.left")
+                        }
+                        .help("Toggle Sidebar")
+                    }
+                }
         }
-        .frame(minWidth: 450, minHeight: 320)
+        .frame(minWidth: 560, minHeight: 380)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .onAppear(perform: refreshPlaylists)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             refreshPlaylists()
@@ -80,15 +96,7 @@ struct MainWindowView: View {
     private var detailContent: some View {
         switch selection ?? .library {
         case .library:
-            CompactPlaylistGrid(
-                playlists: playlists,
-                selectedPlaylistID: selectedPlaylistID,
-                onSelectPlaylist: { selection = .playlist($0) },
-                onPlayNow: applyPlaylistNow,
-                onDelete: deletePlaylist,
-                previewTextProvider: previewText(for:),
-                canPlayProvider: { playableEntry(for: $0) != nil }
-            )
+            WallpaperLibraryView()
         case .playlist(let id):
             if let playlist = playlists.first(where: { $0.id == id }) {
                 PlaylistEditorHost(
