@@ -2,6 +2,8 @@ import XCTest
 @testable import WPswitcher
 
 final class DefaultSchedulerCoordinatorTests: XCTestCase {
+    private let selectionDefaultsKey = "DefaultSchedulerCoordinatorTests.activePlaylist"
+
     func testCoordinatorUsesSingleDeterministicActivePlaylist() async throws {
         let earlyDate = Date(timeIntervalSince1970: 100)
         let lateDate = Date(timeIntervalSince1970: 200)
@@ -26,10 +28,121 @@ final class DefaultSchedulerCoordinatorTests: XCTestCase {
 
         coordinator.advance()
         await waitUntil("manual advance application") {
-            wallpaperService.appliedPlaylists.count == 1
+            wallpaperService.currentAppliedPlaylists.count == 1
         }
 
-        XCTAssertEqual(wallpaperService.appliedPlaylists, [earlyPlaylist.id])
+        XCTAssertEqual(wallpaperService.currentAppliedPlaylists, [earlyPlaylist.id])
+        coordinator.pause()
+    }
+
+    func testCoordinatorRestoresPersistedActivePlaylistSelection() async throws {
+        let earlyDate = Date(timeIntervalSince1970: 100)
+        let lateDate = Date(timeIntervalSince1970: 200)
+        let earlyPlaylist = makePlaylist(name: "Early", createdAt: earlyDate)
+        let latePlaylist = makePlaylist(name: "Late", createdAt: lateDate)
+        let playlistStore = MockPlaylistStore(playlists: [earlyPlaylist, latePlaylist])
+        let wallpaperService = MockWallpaperService()
+        let (defaults, suiteName) = makeDefaults()
+        defer { clearDefaults(named: suiteName) }
+
+        defaults.set(latePlaylist.id.uuidString, forKey: selectionDefaultsKey)
+
+        let coordinator = DefaultSchedulerCoordinator(
+            playlistStore: playlistStore,
+            wallpaperService: wallpaperService,
+            workspaceNotificationCenter: NotificationCenter(),
+            playlistNotificationCenter: NotificationCenter(),
+            userDefaults: defaults,
+            activePlaylistDefaultsKey: selectionDefaultsKey,
+            queue: DispatchQueue(label: "DefaultSchedulerCoordinatorTests.restoreQueue")
+        )
+
+        coordinator.start()
+        await waitUntil("restored active playlist") {
+            coordinator.activePlaylistID == latePlaylist.id
+        }
+        await waitUntil("restored active playlist schedule") {
+            playlistStore.currentFetchCount >= 1
+        }
+
+        await waitUntil("manual advance after restored selection") {
+            coordinator.advance()
+            return wallpaperService.currentAppliedPlaylists.contains(latePlaylist.id)
+        }
+
+        let appliedPlaylists = wallpaperService.currentAppliedPlaylists
+        XCTAssertFalse(appliedPlaylists.isEmpty)
+        XCTAssertTrue(appliedPlaylists.allSatisfy { $0 == latePlaylist.id })
+        XCTAssertEqual(appliedPlaylists.last, latePlaylist.id)
+        coordinator.pause()
+    }
+
+    func testCoordinatorPersistsFallbackSelectionWhenPreferenceMissing() async throws {
+        let earlyDate = Date(timeIntervalSince1970: 100)
+        let lateDate = Date(timeIntervalSince1970: 200)
+        let earlyPlaylist = makePlaylist(name: "Early", createdAt: earlyDate)
+        let latePlaylist = makePlaylist(name: "Late", createdAt: lateDate)
+        let playlistStore = MockPlaylistStore(playlists: [latePlaylist, earlyPlaylist])
+        let wallpaperService = MockWallpaperService()
+        let (defaults, suiteName) = makeDefaults()
+        defer { clearDefaults(named: suiteName) }
+
+        let coordinator = DefaultSchedulerCoordinator(
+            playlistStore: playlistStore,
+            wallpaperService: wallpaperService,
+            workspaceNotificationCenter: NotificationCenter(),
+            playlistNotificationCenter: NotificationCenter(),
+            userDefaults: defaults,
+            activePlaylistDefaultsKey: selectionDefaultsKey,
+            queue: DispatchQueue(label: "DefaultSchedulerCoordinatorTests.migrationQueue")
+        )
+
+        coordinator.start()
+        await waitUntil("fallback active playlist") {
+            coordinator.activePlaylistID == earlyPlaylist.id
+        }
+
+        XCTAssertEqual(defaults.string(forKey: selectionDefaultsKey), earlyPlaylist.id.uuidString)
+        coordinator.pause()
+    }
+
+    func testSetActivePlaylistPersistsSelectionAndControlsAdvance() async throws {
+        let earlyDate = Date(timeIntervalSince1970: 100)
+        let lateDate = Date(timeIntervalSince1970: 200)
+        let earlyPlaylist = makePlaylist(name: "Early", createdAt: earlyDate)
+        let latePlaylist = makePlaylist(name: "Late", createdAt: lateDate)
+        let playlistStore = MockPlaylistStore(playlists: [earlyPlaylist, latePlaylist])
+        let wallpaperService = MockWallpaperService()
+        let (defaults, suiteName) = makeDefaults()
+        defer { clearDefaults(named: suiteName) }
+
+        let coordinator = DefaultSchedulerCoordinator(
+            playlistStore: playlistStore,
+            wallpaperService: wallpaperService,
+            workspaceNotificationCenter: NotificationCenter(),
+            playlistNotificationCenter: NotificationCenter(),
+            userDefaults: defaults,
+            activePlaylistDefaultsKey: selectionDefaultsKey,
+            queue: DispatchQueue(label: "DefaultSchedulerCoordinatorTests.selectQueue")
+        )
+
+        coordinator.start()
+        await waitUntil("initial active playlist") {
+            coordinator.activePlaylistID == earlyPlaylist.id
+        }
+
+        coordinator.setActivePlaylist(id: latePlaylist.id)
+        await waitUntil("selected active playlist") {
+            coordinator.activePlaylistID == latePlaylist.id
+        }
+
+        coordinator.advance()
+        await waitUntil("advance after explicit selection") {
+            wallpaperService.currentAppliedPlaylists.count == 1
+        }
+
+        XCTAssertEqual(wallpaperService.currentAppliedPlaylists.last, latePlaylist.id)
+        XCTAssertEqual(defaults.string(forKey: selectionDefaultsKey), latePlaylist.id.uuidString)
         coordinator.pause()
     }
 
@@ -100,6 +213,21 @@ final class DefaultSchedulerCoordinatorTests: XCTestCase {
         }
         XCTFail("Timed out waiting for \(label)")
     }
+
+    private func makeDefaults() -> (UserDefaults, String) {
+        let suiteName = "DefaultSchedulerCoordinatorTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            fatalError("Unable to create isolated UserDefaults suite")
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        return (defaults, suiteName)
+    }
+
+    private func clearDefaults(named suiteName: String) {
+        if let defaults = UserDefaults(suiteName: suiteName) {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+    }
 }
 
 private enum MockStoreError: Error {
@@ -157,6 +285,10 @@ private final class MockPlaylistStore: PlaylistStore {
 private final class MockWallpaperService: WallpaperService {
     private let lock = NSLock()
     private(set) var appliedPlaylists: [UUID] = []
+
+    var currentAppliedPlaylists: [UUID] {
+        lock.withLock { appliedPlaylists }
+    }
 
     @discardableResult
     func apply(entry: PlaylistEntryRecord, from playlist: PlaylistRecord) -> Bool {

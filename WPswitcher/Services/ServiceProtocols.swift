@@ -32,6 +32,7 @@ protocol PlaylistStore {
 protocol SchedulerCoordinator {
     var isRunning: Bool { get }
     var activePlaylistID: UUID? { get }
+    func setActivePlaylist(id: UUID)
     func start()
     func pause()
     func toggleRotation()
@@ -98,6 +99,8 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
     private let workspace: NSWorkspace
     private let workspaceNotificationCenter: NotificationCenter
     private let playlistNotificationCenter: NotificationCenter
+    private let userDefaults: UserDefaults
+    private let activePlaylistDefaultsKey: String
     private let dateProvider: () -> Date
     private let logger = Logger(subsystem: "com.example.WPswitcher", category: "Scheduler")
 
@@ -113,6 +116,7 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
     private var wallpaperObserver: NSObjectProtocol?
     private var running = false
     private var currentPlaylistID: UUID?
+    private var preferredPlaylistID: UUID?
     private var rebuildGeneration: UInt64 = 0
 
     private let minimumInterval: TimeInterval = 5 // seconds
@@ -123,6 +127,8 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
         workspace: NSWorkspace = .shared,
         workspaceNotificationCenter: NotificationCenter? = nil,
         playlistNotificationCenter: NotificationCenter = .default,
+        userDefaults: UserDefaults = .standard,
+        activePlaylistDefaultsKey: String = "WPswitcher.ActivePlaylistID",
         dateProvider: @escaping () -> Date = Date.init,
         queue: DispatchQueue? = nil
     ) {
@@ -131,6 +137,12 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
         self.workspace = workspace
         self.workspaceNotificationCenter = workspaceNotificationCenter ?? workspace.notificationCenter
         self.playlistNotificationCenter = playlistNotificationCenter
+        self.userDefaults = userDefaults
+        self.activePlaylistDefaultsKey = activePlaylistDefaultsKey
+        self.preferredPlaylistID = Self.readPersistedPlaylistID(
+            from: userDefaults,
+            defaultsKey: activePlaylistDefaultsKey
+        )
         self.dateProvider = dateProvider
         self.queue = queue ?? DispatchQueue(label: "com.example.WPswitcher.scheduler", qos: .utility)
         self.queue.setSpecific(key: queueKey, value: ())
@@ -141,7 +153,17 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
     }
 
     var activePlaylistID: UUID? {
-        stateQueue.sync { currentPlaylistID }
+        stateQueue.sync { currentPlaylistID ?? preferredPlaylistID }
+    }
+
+    func setActivePlaylist(id: UUID) {
+        queue.async {
+            self.persistPreferredPlaylistID(id)
+            self.setCurrentPlaylistID(id)
+            guard self.isRunning else { return }
+            self.logger.log("Active playlist explicitly set to \(id.uuidString, privacy: .public)")
+            self.rebuildSchedules(reason: .manualRefresh)
+        }
     }
 
     func start() {
@@ -213,6 +235,29 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
         stateQueue.sync { currentPlaylistID = playlistID }
     }
 
+    private var preferredActivePlaylistID: UUID? {
+        stateQueue.sync { preferredPlaylistID }
+    }
+
+    private func persistPreferredPlaylistID(_ playlistID: UUID) {
+        stateQueue.sync { preferredPlaylistID = playlistID }
+        userDefaults.set(playlistID.uuidString, forKey: activePlaylistDefaultsKey)
+    }
+
+    private static func readPersistedPlaylistID(
+        from userDefaults: UserDefaults,
+        defaultsKey: String
+    ) -> UUID? {
+        guard let rawValue = userDefaults.string(forKey: defaultsKey) else {
+            return nil
+        }
+        guard let identifier = UUID(uuidString: rawValue) else {
+            userDefaults.removeObject(forKey: defaultsKey)
+            return nil
+        }
+        return identifier
+    }
+
     private func isPlaylistPlayable(_ playlist: PlaylistRecord) -> Bool {
         playlist.entries.contains { $0.lightWallpaper != nil || $0.darkWallpaper != nil }
     }
@@ -259,7 +304,11 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
             return $0.id.uuidString < $1.id.uuidString
         }
 
-        guard let activeRecord = resolveActiveRecord(from: orderedPlayable) else {
+        let preferredPlaylistID = preferredActivePlaylistID
+        guard let activeRecord = resolveActiveRecord(
+            from: orderedPlayable,
+            preferredPlaylistID: preferredPlaylistID
+        ) else {
             for schedule in schedules.values {
                 schedule.cancelTimer()
             }
@@ -267,6 +316,10 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
             setCurrentPlaylistID(nil)
             logger.log("No playable playlists available; scheduler is idle")
             return
+        }
+
+        if preferredPlaylistID != activeRecord.id {
+            persistPreferredPlaylistID(activeRecord.id)
         }
 
         let activePlaylistID = activeRecord.id
@@ -290,10 +343,13 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
         }
     }
 
-    private func resolveActiveRecord(from orderedPlayable: [PlaylistRecord]) -> PlaylistRecord? {
+    private func resolveActiveRecord(
+        from orderedPlayable: [PlaylistRecord],
+        preferredPlaylistID: UUID?
+    ) -> PlaylistRecord? {
         guard !orderedPlayable.isEmpty else { return nil }
-        if let current = activePlaylistID,
-           let matched = orderedPlayable.first(where: { $0.id == current }) {
+        if let preferredPlaylistID,
+           let matched = orderedPlayable.first(where: { $0.id == preferredPlaylistID }) {
             return matched
         }
         return orderedPlayable.first

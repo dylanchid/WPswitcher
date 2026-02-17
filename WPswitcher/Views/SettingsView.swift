@@ -5,6 +5,10 @@ struct SettingsView: View {
     @EnvironmentObject private var services: ServiceRegistry
     @State private var selection: SettingsSection = .general
     @State private var launchAtLogin = false
+    @State private var playlists: [PlaylistRecord] = []
+    @State private var activePlaylistSelection: UUID?
+    @State private var isLoadingPlaylists = false
+    @State private var playlistLoadError: String?
 
     var body: some View {
         TabView(selection: $selection) {
@@ -16,14 +20,71 @@ struct SettingsView: View {
         }
         .frame(width: 720, height: 520)
         .onAppear {
-            checkLaunchAtLogin()
+            initialize()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .playlistStoreDidChange)) { _ in
+            refreshPlaylists()
+        }
+    }
+
+    private func initialize() {
+        checkLaunchAtLogin()
+        refreshPlaylists()
     }
 
     private func checkLaunchAtLogin() {
         if #available(macOS 13.0, *) {
             launchAtLogin = SMAppService.mainApp.status == .enabled
         }
+    }
+
+    private func refreshPlaylists() {
+        isLoadingPlaylists = true
+        playlistLoadError = nil
+
+        Task {
+            do {
+                let fetched = try await services.playlistStore.fetchPlaylists()
+                let sorted = sortPlaylists(fetched)
+                await MainActor.run {
+                    playlists = sorted
+                    isLoadingPlaylists = false
+                    syncActivePlaylistSelection(with: sorted)
+                }
+            } catch {
+                await MainActor.run {
+                    playlists = []
+                    activePlaylistSelection = nil
+                    isLoadingPlaylists = false
+                    playlistLoadError = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    private func sortPlaylists(_ records: [PlaylistRecord]) -> [PlaylistRecord] {
+        records.sorted {
+            if $0.createdAt != $1.createdAt {
+                return $0.createdAt < $1.createdAt
+            }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+    }
+
+    private func syncActivePlaylistSelection(with playlists: [PlaylistRecord]) {
+        if let selected = services.schedulerCoordinator.activePlaylistID,
+           playlists.contains(where: { $0.id == selected }) {
+            activePlaylistSelection = selected
+            return
+        }
+
+        guard let fallback = playlists.first else {
+            activePlaylistSelection = nil
+            return
+        }
+
+        activePlaylistSelection = fallback.id
+        services.schedulerCoordinator.setActivePlaylist(id: fallback.id)
     }
 
     private var generalSettings: some View {
@@ -45,6 +106,43 @@ struct SettingsView: View {
                     .onChange(of: launchAtLogin) { newValue in
                         updateLaunchAtLogin(enabled: newValue)
                     }
+            }
+
+            LabeledContent("Active Playlist") {
+                if playlists.isEmpty {
+                    Text("No playlists available")
+                        .foregroundColor(.secondary)
+                } else {
+                    Picker("Active Playlist", selection: Binding(
+                        get: { activePlaylistSelection ?? playlists[0].id },
+                        set: { selectedID in
+                            guard activePlaylistSelection != selectedID else { return }
+                            activePlaylistSelection = selectedID
+                            services.schedulerCoordinator.setActivePlaylist(id: selectedID)
+                        }
+                    )) {
+                        ForEach(playlists) { playlist in
+                            Text(playlist.name).tag(playlist.id)
+                        }
+                    }
+                    .labelsHidden()
+                    .controlSize(.small)
+                    .frame(maxWidth: 280)
+                }
+            }
+
+            if isLoadingPlaylists {
+                ProgressView("Loading playlists…")
+                    .controlSize(.small)
+            } else {
+                Button("Refresh Playlist List", action: refreshPlaylists)
+                    .controlSize(.small)
+            }
+
+            if let playlistLoadError {
+                Text("Playlist loading error: \(playlistLoadError)")
+                    .font(.footnote)
+                    .foregroundColor(.red)
             }
             
             Text("Rotation Interval is configured per-playlist.")
