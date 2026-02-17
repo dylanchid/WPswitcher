@@ -46,8 +46,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             window.setContentSize(NSSize(width: 640, height: 400))
         }
         window.setFrameAutosaveName("MainWindow")
-        // Borderless: no title bar, no traffic lights, content only. Show/hide via menu bar icon.
-        window.styleMask = [.borderless]
+        // Keep compact appearance while allowing toolbar-hosted controls.
+        window.styleMask = [.titled, .fullSizeContentView]
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        if #available(macOS 11, *) {
+            window.toolbarStyle = .unifiedCompact
+        }
+        window.standardWindowButton(.closeButton)?.isHidden = true
+        window.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        window.standardWindowButton(.zoomButton)?.isHidden = true
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = true
