@@ -97,7 +97,7 @@ extension PlaylistEntity {
         return storedAssignments.sorted { $0.order < $1.order }
     }
 
-    func applyDraft(_ draft: PlaylistDraft, createdAt defaultCreatedAt: Date = Date(), in context: NSManagedObjectContext) {
+    func applyDraft(_ draft: PlaylistDraft, createdAt defaultCreatedAt: Date = Date(), in context: NSManagedObjectContext) throws {
         name = draft.name
         intervalMinutes = Int32(draft.intervalMinutes)
         playbackMode = draft.playbackMode
@@ -106,7 +106,7 @@ extension PlaylistEntity {
             createdAt = defaultCreatedAt
         }
 
-        let wallpaperLookup = fetchWallpapers(for: draft, in: context)
+        let wallpaperLookup = try fetchWallpapers(for: draft, in: context)
 
         let existingItems = Dictionary(uniqueKeysWithValues: orderedItems.map { ($0.id, $0) })
         let desiredEntries = draft.entries.sorted { $0.order < $1.order }
@@ -187,7 +187,7 @@ extension PlaylistEntity {
         )
     }
 
-    private func fetchWallpapers(for draft: PlaylistDraft, in context: NSManagedObjectContext) -> [UUID: WallpaperEntity] {
+    private func fetchWallpapers(for draft: PlaylistDraft, in context: NSManagedObjectContext) throws -> [UUID: WallpaperEntity] {
         var identifiers: Set<UUID> = []
         draft.entries.forEach { entry in
             if let lightId = entry.lightWallpaperId {
@@ -210,13 +210,13 @@ extension PlaylistEntity {
 
         let request = WallpaperEntity.fetchRequest()
         request.predicate = NSPredicate(format: "id IN %@", identifiers as NSSet)
-
-        do {
-            let results = try context.fetch(request)
-            return Dictionary(uniqueKeysWithValues: results.map { ($0.id, $0) })
-        } catch {
-            return [:]
+        let results = try context.fetch(request)
+        let lookup = Dictionary(uniqueKeysWithValues: results.map { ($0.id, $0) })
+        let missing = identifiers.subtracting(lookup.keys)
+        if !missing.isEmpty {
+            throw PlaylistStoreError.missingWallpaperReferences(Array(missing).sorted { $0.uuidString < $1.uuidString })
         }
+        return lookup
     }
 
     private func makeEntryRecords() -> [PlaylistEntryRecord] {

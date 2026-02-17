@@ -4,20 +4,27 @@ import Foundation
 import os.log
 import UniformTypeIdentifiers
 
+extension Notification.Name {
+    static let wallpaperLibraryDidChange = Notification.Name("com.example.WPswitcher.wallpaperLibraryDidChange")
+}
+
 final class CoreDataWallpaperService: WallpaperService {
     private let persistence: PersistenceController
     private let playlistStore: PlaylistStore
     private let fileManager: FileManager
+    private let notificationCenter: NotificationCenter
     private let logger = Logger(subsystem: "com.example.WPswitcher", category: "WallpaperService")
 
     init(
         persistence: PersistenceController,
         playlistStore: PlaylistStore,
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        notificationCenter: NotificationCenter = .default
     ) {
         self.persistence = persistence
         self.playlistStore = playlistStore
         self.fileManager = fileManager
+        self.notificationCenter = notificationCenter
     }
 
     @discardableResult
@@ -43,7 +50,7 @@ final class CoreDataWallpaperService: WallpaperService {
             }
             appliedAny = apply(wallpaper: wallpaper, to: screens, playlistName: playlist.name)
         case .perDisplay:
-            let assignments = Dictionary(uniqueKeysWithValues: playlist.displayAssignments.map { ($0.displayID, $0) })
+            let assignments = assignmentLookup(for: playlist.displayAssignments)
             for screen in screens {
                 let identifier = displayIdentifier(for: screen)
                 let assignmentWallpaper = identifier.flatMap { id in
@@ -119,6 +126,10 @@ final class CoreDataWallpaperService: WallpaperService {
             throw errors.first!
         }
 
+        if !imported.isEmpty {
+            notifyWallpaperLibraryChanged()
+        }
+
         return imported
     }
 
@@ -165,8 +176,8 @@ final class CoreDataWallpaperService: WallpaperService {
 
     func deleteWallpaper(id: UUID) async throws {
         let context = persistence.newBackgroundContext()
-        
-        try await context.perform {
+
+        let deleted = try await context.perform {
             let request = WallpaperEntity.fetchRequest()
             request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
             request.fetchLimit = 1
@@ -174,7 +185,13 @@ final class CoreDataWallpaperService: WallpaperService {
             if let entity = try context.fetch(request).first {
                 context.delete(entity)
                 try context.save()
+                return true
             }
+            return false
+        }
+
+        if deleted {
+            notifyWallpaperLibraryChanged()
         }
     }
 
@@ -209,6 +226,26 @@ final class CoreDataWallpaperService: WallpaperService {
     }
 
     // MARK: - Helpers
+
+    func assignmentLookup(for assignments: [DisplayAssignmentRecord]) -> [String: DisplayAssignmentRecord] {
+        var lookup: [String: DisplayAssignmentRecord] = [:]
+        for assignment in assignments {
+            let key = assignment.displayID.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !key.isEmpty else {
+                logger.warning("Skipping display assignment with empty display identifier")
+                continue
+            }
+            if lookup[key] != nil {
+                logger.warning("Duplicate display assignment for identifier \(key, privacy: .public); latest entry will be used")
+            }
+            lookup[key] = assignment
+        }
+        return lookup
+    }
+
+    private func notifyWallpaperLibraryChanged() {
+        notificationCenter.post(name: .wallpaperLibraryDidChange, object: self)
+    }
 
     private func collectImageFiles(from urls: [URL]) -> [URL] {
         var collected: OrderedSet<URL> = []

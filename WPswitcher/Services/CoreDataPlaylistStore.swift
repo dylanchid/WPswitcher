@@ -21,14 +21,15 @@ final class CoreDataPlaylistStore: PlaylistStore {
     func createPlaylist(_ draft: PlaylistDraft) async throws -> PlaylistRecord {
         let context = persistence.newBackgroundContext()
         
-        let producedRecord = try await context.perform {
+        let objectID = try await context.perform {
             let playlist = PlaylistEntity(context: context)
             playlist.id = draft.id ?? UUID()
-            playlist.applyDraft(draft, in: context)
+            try playlist.applyDraft(draft, in: context)
             try context.save()
-            return playlist.toRecord()
+            return playlist.objectID
         }
 
+        let producedRecord = try await materializePlaylistRecord(objectID: objectID)
         notifyPlaylistChanged(playlistID: producedRecord.id)
         return producedRecord
     }
@@ -38,6 +39,7 @@ final class CoreDataPlaylistStore: PlaylistStore {
         
         return try await context.perform {
             let request = PlaylistEntity.fetchRequest()
+            request.relationshipKeyPathsForPrefetching = ["items", "displayAssignments", "items.lightWallpaper", "items.darkWallpaper", "displayAssignments.lightWallpaper", "displayAssignments.darkWallpaper"]
             let results = try context.fetch(request)
             return results.map { $0.toRecord() }
         }
@@ -50,6 +52,7 @@ final class CoreDataPlaylistStore: PlaylistStore {
             let request = PlaylistEntity.fetchRequest()
             request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
             request.fetchLimit = 1
+            request.relationshipKeyPathsForPrefetching = ["items", "displayAssignments", "items.lightWallpaper", "items.darkWallpaper", "displayAssignments.lightWallpaper", "displayAssignments.darkWallpaper"]
             return try context.fetch(request).first?.toRecord()
         }
     }
@@ -62,20 +65,22 @@ final class CoreDataPlaylistStore: PlaylistStore {
 
         let context = persistence.newBackgroundContext()
         
-        let producedRecord = try await context.perform {
+        let objectID = try await context.perform {
             let request = PlaylistEntity.fetchRequest()
             request.predicate = NSPredicate(format: "id == %@", identifier as CVarArg)
             request.fetchLimit = 1
+            request.relationshipKeyPathsForPrefetching = ["items", "displayAssignments"]
 
             guard let playlist = try context.fetch(request).first else {
                 throw PlaylistStoreError.playlistNotFound
             }
 
-            playlist.applyDraft(draft, in: context)
+            try playlist.applyDraft(draft, in: context)
             try context.save()
-            return playlist.toRecord()
+            return playlist.objectID
         }
 
+        let producedRecord = try await materializePlaylistRecord(objectID: objectID)
         notifyPlaylistChanged(playlistID: producedRecord.id)
         return producedRecord
     }
@@ -123,6 +128,19 @@ final class CoreDataPlaylistStore: PlaylistStore {
                 entity.bookmarkData = bookmark
             }
             try context.save()
+            return entity.toRecord()
+        }
+    }
+
+    /// Builds a PlaylistRecord on the view context (main thread) to avoid priority inversion:
+    /// a user-initiated caller would otherwise wait on background context's utility-QoS work in toRecord().
+    private func materializePlaylistRecord(objectID: NSManagedObjectID) async throws -> PlaylistRecord {
+        try await MainActor.run {
+            let viewContext = persistence.viewContext
+            viewContext.processPendingChanges()
+            guard let entity = try? viewContext.existingObject(with: objectID) as? PlaylistEntity else {
+                throw PlaylistStoreError.playlistNotFound
+            }
             return entity.toRecord()
         }
     }

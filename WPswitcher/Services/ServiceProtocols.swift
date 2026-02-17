@@ -46,6 +46,7 @@ protocol AppearanceObserver {
 enum PlaylistStoreError: Error {
     case playlistNotFound
     case invalidDraft
+    case missingWallpaperReferences([UUID])
 }
 
 final class DefaultWallpaperService: WallpaperService {
@@ -79,7 +80,7 @@ final class DefaultWallpaperService: WallpaperService {
     }
 }
 
-final class DefaultSchedulerCoordinator: SchedulerCoordinator {
+final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendable {
     private enum ScheduleUpdateCause: String {
         case start
         case wake
@@ -109,8 +110,10 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator {
     private var wakeObserver: NSObjectProtocol?
     private var appearanceObserver: NSObjectProtocol?
     private var playlistObserver: NSObjectProtocol?
+    private var wallpaperObserver: NSObjectProtocol?
     private var running = false
     private var currentPlaylistID: UUID?
+    private var rebuildGeneration: UInt64 = 0
 
     private let minimumInterval: TimeInterval = 5 // seconds
 
@@ -163,6 +166,7 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator {
             }
             self.logger.log("Pausing scheduler")
             self.setRunning(false)
+            self.setCurrentPlaylistID(nil)
             self.cancelAllTimers(clearRemaining: true)
             self.unsubscribeFromWorkspaceNotifications()
             self.unsubscribeFromPlaylistNotifications()
@@ -189,11 +193,13 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator {
         queue.async {
             guard self.isRunning else { return }
             self.logger.log("Manual advance requested")
-            // Advance all active schedules
-            for schedule in self.schedules.values {
-                self.performRotation(for: schedule, trigger: .manual)
-                self.rescheduleTimer(for: schedule, reason: .manualRefresh)
+            guard let activePlaylistID = self.activePlaylistID,
+                  let schedule = self.schedules[activePlaylistID] else {
+                self.logger.warning("Manual advance requested without an active schedule")
+                return
             }
+            self.performRotation(for: schedule, trigger: .manual)
+            self.rescheduleTimer(for: schedule, reason: .manualRefresh)
         }
     }
 
@@ -203,51 +209,94 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator {
         stateQueue.sync { running = newValue }
     }
 
+    private func setCurrentPlaylistID(_ playlistID: UUID?) {
+        stateQueue.sync { currentPlaylistID = playlistID }
+    }
+
     private func isPlaylistPlayable(_ playlist: PlaylistRecord) -> Bool {
         playlist.entries.contains { $0.lightWallpaper != nil || $0.darkWallpaper != nil }
     }
 
     private func rebuildSchedules(reason: DefaultSchedulerCoordinator.ScheduleUpdateCause) {
         guard isRunning else { return }
+        rebuildGeneration &+= 1
+        let generation = rebuildGeneration
 
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             do {
-                let playlists = try await playlistStore.fetchPlaylists()
-                
-                // Jump back to serial queue for state updates
-                queue.async {
+                let playlists = try await self.playlistStore.fetchPlaylists()
+
+                self.queue.async { [weak self] in
+                    guard let self else { return }
+                    guard generation == self.rebuildGeneration else {
+                        self.logger.debug("Ignoring stale schedule rebuild result")
+                        return
+                    }
+                    guard self.isRunning else { return }
                     self.applyNewSchedules(playlists, reason: reason)
                 }
             } catch {
-                queue.async {
+                self.queue.async { [weak self] in
+                    guard let self else { return }
+                    guard generation == self.rebuildGeneration else { return }
                     self.logger.error("Failed to rebuild schedules: \(error.localizedDescription, privacy: .public)")
                 }
             }
         }
     }
-    
-    // Extracted logic to run on queue
+
     private func applyNewSchedules(_ playlists: [PlaylistRecord], reason: DefaultSchedulerCoordinator.ScheduleUpdateCause) {
         let playable = playlists.filter(isPlaylistPlayable)
-        logger.log("Rebuilding schedules for \(playable.count, privacy: .public) playlists (reason: \(reason.rawValue, privacy: .public))")
+        logger.log(
+            "Rebuilding schedules for \(playable.count, privacy: .public) playable playlists (reason: \(reason.rawValue, privacy: .public))"
+        )
 
-        let incomingIds = Set(playable.map(\.id))
-        let existingIds = Set(schedules.keys)
-        let removed = existingIds.subtracting(incomingIds)
+        let orderedPlayable = playable.sorted {
+            if $0.createdAt != $1.createdAt {
+                return $0.createdAt < $1.createdAt
+            }
+            return $0.id.uuidString < $1.id.uuidString
+        }
 
-        for identifier in removed {
+        guard let activeRecord = resolveActiveRecord(from: orderedPlayable) else {
+            for schedule in schedules.values {
+                schedule.cancelTimer()
+            }
+            schedules.removeAll()
+            setCurrentPlaylistID(nil)
+            logger.log("No playable playlists available; scheduler is idle")
+            return
+        }
+
+        let activePlaylistID = activeRecord.id
+        let staleIdentifiers = schedules.keys.filter { $0 != activePlaylistID }
+        for identifier in staleIdentifiers {
             if let schedule = schedules.removeValue(forKey: identifier) {
                 schedule.cancelTimer()
-                logger.log("Removed schedule for playlist \(schedule.record.name, privacy: .public)")
             }
         }
 
-        for record in playable {
-            let schedule = schedules[record.id] ?? PlaylistSchedule(record: record)
-            schedule.update(with: record)
-            schedules[record.id] = schedule
-            rescheduleTimer(for: schedule, reason: reason)
+        let schedule = schedules[activePlaylistID] ?? PlaylistSchedule(record: activeRecord)
+        schedule.update(with: activeRecord)
+        schedules[activePlaylistID] = schedule
+        setCurrentPlaylistID(activePlaylistID)
+        rescheduleTimer(for: schedule, reason: reason)
+
+        if orderedPlayable.count > 1 {
+            logger.warning(
+                "Multiple playable playlists detected (\(orderedPlayable.count, privacy: .public)); scheduling only active playlist \(activeRecord.name, privacy: .public)"
+            )
         }
+    }
+
+    private func resolveActiveRecord(from orderedPlayable: [PlaylistRecord]) -> PlaylistRecord? {
+        guard !orderedPlayable.isEmpty else { return nil }
+        if let current = activePlaylistID,
+           let matched = orderedPlayable.first(where: { $0.id == current }) {
+            return matched
+        }
+        return orderedPlayable.first
     }
 
     private func rescheduleTimer(for schedule: PlaylistSchedule, reason: DefaultSchedulerCoordinator.ScheduleUpdateCause) {
@@ -313,7 +362,7 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator {
         let applied = wallpaperService.apply(entry: entry, from: schedule.record)
 
         if applied {
-            currentPlaylistID = schedule.id
+            setCurrentPlaylistID(schedule.id)
             if let wallpaper = preview {
                 logger.log(
                     "Rotated playlist \(schedule.record.name, privacy: .public) to wallpaper \(wallpaper.displayName, privacy: .public) (trigger \(trigger.rawValue, privacy: .public))"
@@ -439,13 +488,20 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator {
     }
 
     private func subscribeToPlaylistNotifications() {
-        guard playlistObserver == nil else { return }
+        guard playlistObserver == nil, wallpaperObserver == nil else { return }
         playlistObserver = playlistNotificationCenter.addObserver(
             forName: .playlistStoreDidChange,
             object: nil,
             queue: nil
         ) { [weak self] notification in
             self?.handlePlaylistStoreDidChange(notification)
+        }
+        wallpaperObserver = playlistNotificationCenter.addObserver(
+            forName: .wallpaperLibraryDidChange,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            self?.handleWallpaperLibraryDidChange()
         }
         logger.log("Registered playlist store observer")
     }
@@ -454,6 +510,10 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator {
         if let playlistObserver {
             playlistNotificationCenter.removeObserver(playlistObserver)
             self.playlistObserver = nil
+        }
+        if let wallpaperObserver {
+            playlistNotificationCenter.removeObserver(wallpaperObserver)
+            self.wallpaperObserver = nil
         }
     }
 
@@ -466,6 +526,14 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator {
             } else {
                 self.logger.log("Received playlist change notification; refreshing schedules")
             }
+            self.rebuildSchedules(reason: .manualRefresh)
+        }
+    }
+
+    private func handleWallpaperLibraryDidChange() {
+        queue.async {
+            guard self.isRunning else { return }
+            self.logger.log("Wallpaper library changed; rebuilding schedules")
             self.rebuildSchedules(reason: .manualRefresh)
         }
     }

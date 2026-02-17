@@ -29,6 +29,8 @@
 		00B8AC032C7E8AAA00A5E9F1 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AC022C7E8AAA00A5E9F1 /* ErrorBanner.swift */; };
 		00B8AC052C7E8AAA00A5E9F1 /* WallpaperLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AC042C7E8AAA00A5E9F1 /* WallpaperLibraryView.swift */; };
 		00B8AC072C7E8AAB00A5E9F1 /* SystemAppearanceObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B8AC062C7E8AAB00A5E9F1 /* SystemAppearanceObserver.swift */; };
+		F1A2B3C62F00000100A1B2C3 /* ErrorManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C42F00000100A1B2C3 /* ErrorManagerTests.swift */; };
+		F1A2B3C72F00000100A1B2C3 /* DefaultSchedulerCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C52F00000100A1B2C3 /* DefaultSchedulerCoordinatorTests.swift */; };
 		E5637F3CF772F26BCA3D0635 /* CompactPlaylistGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5637F3CF772F26BCA3D0634 /* CompactPlaylistGrid.swift */; };
 /* End PBXBuildFile section */
 
@@ -70,6 +72,8 @@
 		E5637F3CF772F26BCA3D0634 /* CompactPlaylistGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactPlaylistGrid.swift; sourceTree = "<group>"; };
 		00B8AC042C7E8AAA00A5E9F1 /* WallpaperLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperLibraryView.swift; sourceTree = "<group>"; };
 		00B8AC062C7E8AAB00A5E9F1 /* SystemAppearanceObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAppearanceObserver.swift; sourceTree = "<group>"; };
+		F1A2B3C42F00000100A1B2C3 /* ErrorManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorManagerTests.swift; sourceTree = "<group>"; };
+		F1A2B3C52F00000100A1B2C3 /* DefaultSchedulerCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultSchedulerCoordinatorTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -165,6 +169,8 @@
 				00B8A9B22C7E7F2C00A5E9F1 /* WPswitcherTests.swift */,
 				00B8AA0F2C7E7F2D00A5E9F1 /* CoreDataPlaylistStoreTests.swift */,
 				00B8AA1E2C7E7F2E00A5E9F1 /* CoreDataWallpaperServiceTests.swift */,
+				F1A2B3C42F00000100A1B2C3 /* ErrorManagerTests.swift */,
+				F1A2B3C52F00000100A1B2C3 /* DefaultSchedulerCoordinatorTests.swift */,
 				00B8AA012C7E7F2D00A5E9F1 /* Info.plist */,
 			);
 			path = WPswitcherTests;
@@ -328,6 +334,8 @@
 				00B8AA172C7E7F2D00A5E9F1 /* CoreDataPlaylistStoreTests.swift in Sources */,
 				00B8AA1F2C7E7F2E00A5E9F1 /* CoreDataWallpaperServiceTests.swift in Sources */,
 				00B8A9B32C7E7F2C00A5E9F1 /* WPswitcherTests.swift in Sources */,
+				F1A2B3C62F00000100A1B2C3 /* ErrorManagerTests.swift in Sources */,
+				F1A2B3C72F00000100A1B2C3 /* DefaultSchedulerCoordinatorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

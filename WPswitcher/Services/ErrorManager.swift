@@ -51,13 +51,18 @@ enum AppError: LocalizedError {
     }
 }
 
-final class ErrorManager: ObservableObject {
+final class ErrorManager: ObservableObject, @unchecked Sendable {
     @Published var currentError: AppError?
     @Published var showError = false
     @Published var errorQueue: [AppError] = []
     
     private let logger = Logger(subsystem: "com.example.WPswitcher", category: "ErrorManager")
+    private let autoDismissInterval: TimeInterval
     private var errorTimer: Timer?
+
+    init(autoDismissInterval: TimeInterval = 5.0) {
+        self.autoDismissInterval = autoDismissInterval
+    }
 
     @MainActor
     func handle(_ error: Error, context: String = "") {
@@ -71,14 +76,7 @@ final class ErrorManager: ObservableObject {
         }
 
         errorQueue.append(appError)
-
-        // Auto-dismiss after 5 seconds if no new errors
-        errorTimer?.invalidate()
-        errorTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { [weak self] _ in
-            Task { @MainActor in
-                self?.dismissCurrentError()
-            }
-        }
+        scheduleAutoDismiss()
     }
 
     @MainActor
@@ -89,13 +87,13 @@ final class ErrorManager: ObservableObject {
         
         if let nextError = errorQueue.first {
             currentError = nextError
+            scheduleAutoDismiss()
         } else {
             currentError = nil
             showError = false
+            errorTimer?.invalidate()
+            errorTimer = nil
         }
-        
-        errorTimer?.invalidate()
-        errorTimer = nil
     }
 
     @MainActor
@@ -105,6 +103,16 @@ final class ErrorManager: ObservableObject {
         errorQueue.removeAll()
         errorTimer?.invalidate()
         errorTimer = nil
+    }
+
+    @MainActor
+    private func scheduleAutoDismiss() {
+        errorTimer?.invalidate()
+        errorTimer = Timer.scheduledTimer(withTimeInterval: autoDismissInterval, repeats: false) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.dismissCurrentError()
+            }
+        }
     }
 
     private func mapToAppError(_ error: Error) -> AppError {

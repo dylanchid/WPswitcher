@@ -51,6 +51,34 @@ final class CoreDataWallpaperServiceTests: XCTestCase {
         }
     }
 
+    func testAssignmentLookupUsesLatestValueForDuplicateDisplayID() {
+        let first = DisplayAssignmentRecord(
+            id: UUID(),
+            displayID: "DISPLAY-1",
+            order: 0,
+            lightWallpaper: nil,
+            darkWallpaper: nil
+        )
+        let duplicate = DisplayAssignmentRecord(
+            id: UUID(),
+            displayID: "DISPLAY-1",
+            order: 1,
+            lightWallpaper: nil,
+            darkWallpaper: nil
+        )
+        let emptyID = DisplayAssignmentRecord(
+            id: UUID(),
+            displayID: "   ",
+            order: 2,
+            lightWallpaper: nil,
+            darkWallpaper: nil
+        )
+
+        let lookup = service.assignmentLookup(for: [first, duplicate, emptyID])
+        XCTAssertEqual(lookup.count, 1)
+        XCTAssertEqual(lookup["DISPLAY-1"]?.id, duplicate.id)
+    }
+
     // MARK: - Helpers
 
     @discardableResult

@@ -129,6 +129,30 @@ final class CoreDataPlaylistStoreTests: XCTestCase {
         }
     }
 
+    func testCreatePlaylistWithMissingWallpaperReferenceThrows() async throws {
+        let missingWallpaperID = UUID()
+        let draft = PlaylistDraft(
+            id: nil,
+            name: "Broken Playlist",
+            intervalMinutes: 15,
+            playbackMode: .sequential,
+            multiDisplayPolicy: .mirror,
+            entries: [
+                PlaylistEntryDraft(id: UUID(), order: 0, lightWallpaperId: missingWallpaperID, darkWallpaperId: nil)
+            ],
+            displayAssignments: []
+        )
+
+        do {
+            _ = try await store.createPlaylist(draft)
+            XCTFail("Expected missing wallpaper references error")
+        } catch PlaylistStoreError.missingWallpaperReferences(let missingIds) {
+            XCTAssertEqual(missingIds, [missingWallpaperID])
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
     func testDeletePlaylistRemovesEntity() async throws {
         let draft = PlaylistDraft(
             id: nil,

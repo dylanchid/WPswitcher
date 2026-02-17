@@ -199,13 +199,41 @@ final class PlaylistEditorViewModel: ObservableObject {
             )
         }
 
-        let assignmentDrafts = displayAssignments.enumerated().map { index, assignment in
+        let normalizedAssignments = displayAssignments.enumerated().map { index, assignment in
+            (
+                index,
+                assignment.id,
+                assignment.displayID.trimmingCharacters(in: .whitespacesAndNewlines),
+                assignment.lightWallpaperId,
+                assignment.darkWallpaperId
+            )
+        }
+
+        if multiDisplayPolicy == .perDisplay {
+            if normalizedAssignments.contains(where: { $0.2.isEmpty }) {
+                errorMessage = "Each display assignment must include a display identifier."
+                isSaving = false
+                return
+            }
+
+            var seenIdentifiers: Set<String> = []
+            for assignment in normalizedAssignments {
+                let canonical = assignment.2.lowercased()
+                if !seenIdentifiers.insert(canonical).inserted {
+                    errorMessage = "Display identifiers must be unique."
+                    isSaving = false
+                    return
+                }
+            }
+        }
+
+        let assignmentDrafts = normalizedAssignments.map { normalized in
             DisplayAssignmentDraft(
-                id: assignment.id,
-                displayID: assignment.displayID,
-                order: index,
-                lightWallpaperId: assignment.lightWallpaperId,
-                darkWallpaperId: assignment.darkWallpaperId
+                id: normalized.1,
+                displayID: normalized.2,
+                order: normalized.0,
+                lightWallpaperId: normalized.3,
+                darkWallpaperId: normalized.4
             )
         }
 
