@@ -19,15 +19,16 @@ struct WallpaperLibraryView: View {
     var body: some View {
         ZStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    // Top: current wallpaper (left) + file details (right)
+                VStack(alignment: .leading, spacing: 6) {
                     mainContentSection
-                    // Bottom: horizontal swipeable thumbnails
                     filmstripSection
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+                .padding(.bottom, 10)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
-            .background(Color(nsColor: .textBackgroundColor))
+            .background(Color(nsColor: .windowBackgroundColor))
             .onAppear(perform: initialize)
             
             ErrorBanner(errorManager: services.errorManager)
@@ -39,15 +40,20 @@ struct WallpaperLibraryView: View {
             Button(action: advanceWallpaper) {
                 Label("Next Wallpaper", systemImage: "arrow.right.circle")
             }
+            .help("Apply the next wallpaper in rotation.")
+
             Button(action: toggleRotation) {
                 Label(
                     isRotationRunning ? "Pause Rotation" : "Resume Rotation",
                     systemImage: isRotationRunning ? "pause.circle" : "play.circle"
                 )
             }
+            .help(isRotationRunning ? "Pause automatic rotation." : "Resume automatic rotation.")
+
             Button(action: importWallpapers) {
-                Label("Import…", systemImage: "square.and.arrow.down")
+                Label("Import Wallpapers", systemImage: "square.and.arrow.down")
             }
+            .help("Import one or more images into the library.")
             .disabled(isImporting)
         }
         .controlSize(.small)
@@ -55,39 +61,28 @@ struct WallpaperLibraryView: View {
         .labelStyle(.iconOnly)
     }
 
-    /// Main content: large current wallpaper on the left, photo/file details on the right.
     private var mainContentSection: some View {
-        HStack(alignment: .top, spacing: 20) {
-            // Left: current wallpaper — large preview
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Text("Current Wallpaper")
-                        .font(.headline)
-                    Spacer()
+        HStack(alignment: .top, spacing: 16) {
+            previewContent
+                .frame(minHeight: 128, maxHeight: 173, alignment: .topLeading)
+                .frame(maxWidth: 430, alignment: .topLeading)
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Spacer(minLength: 0)
                     controlButtons
                 }
-                previewContent
-                    .frame(minHeight: 280)
-                    .frame(maxWidth: .infinity)
-                    .background(Color(nsColor: .controlBackgroundColor).opacity(0.5), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-            .frame(maxWidth: .infinity)
-
-            // Right: photo or file details
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Details")
-                    .font(.headline)
                 fileInfoSection
             }
-            .frame(width: 220, alignment: .topLeading)
+            .frame(width: 250, alignment: .topLeading)
+
+            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     private var previewContent: some View {
-        Group {
+        ZStack {
             switch previewSelection {
             case .currentDesktop:
                 CurrentDesktopPreview(image: currentWallpaperImage, isLoading: isLoadingCurrentWallpaper)
@@ -99,15 +94,14 @@ struct WallpaperLibraryView: View {
                 }
             }
         }
+        .id(previewSelection)
+        .transition(.opacity.combined(with: .scale(scale: 0.98)))
     }
 
     private var fileInfoSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("File Info")
-                .font(.subheadline)
-
+        VStack(alignment: .leading, spacing: 7) {
             if let info = selectedFileInfo {
-                FileInfoRow(label: "File name", value: info.name)
+                FileInfoRow(label: "File", value: info.name, emphasis: .high)
                 if let createdAt = info.createdAt {
                     FileInfoRow(label: "Created", value: Self.fileInfoDateFormatter.string(from: createdAt))
                 }
@@ -117,6 +111,7 @@ struct WallpaperLibraryView: View {
                 if let fileType = info.fileType {
                     FileInfoRow(label: "Type", value: fileType)
                 }
+                FileInfoRow(label: "Location", value: info.location)
             } else {
                 Text("Select a wallpaper to see file details.")
                     .font(.callout)
@@ -163,20 +158,23 @@ struct WallpaperLibraryView: View {
         return formatter
     }()
 
-    /// Horizontal list of thumbnails; user can swipe or scroll to browse. Compact so it fits in default window below the photo.
     private var filmstripSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Library")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 16)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("Library")
+                    .font(.headline)
+                Spacer()
+                Text("\(wallpapers.count) item\(wallpapers.count == 1 ? "" : "s")")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
 
-            ScrollView(.horizontal, showsIndicators: true) {
+            ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     LibraryFilmstripItem(
                         title: "Current Desktop",
                         isSelected: previewSelection == .currentDesktop,
-                        action: { previewSelection = .currentDesktop }
+                        action: selectCurrentDesktop
                     ) {
                         CurrentDesktopThumbnail(image: currentWallpaperImage, isLoading: isLoadingCurrentWallpaper)
                     }
@@ -185,7 +183,7 @@ struct WallpaperLibraryView: View {
                         LibraryFilmstripItem(
                             title: record.displayName,
                             isSelected: previewSelection == .wallpaper(record.id),
-                            action: { previewSelection = .wallpaper(record.id) }
+                            action: { selectWallpaper(record) }
                         ) {
                             WallpaperFilmstripThumbnail(record: record)
                         }
@@ -201,6 +199,7 @@ struct WallpaperLibraryView: View {
                     LibraryFilmstripItem(
                         title: "Add",
                         isSelected: false,
+                        style: .add,
                         action: importWallpapers
                     ) {
                         AddWallpaperThumbnail()
@@ -208,21 +207,18 @@ struct WallpaperLibraryView: View {
                     .disabled(isImporting)
                     .accessibilityLabel("Add Wallpapers")
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
+                .padding(.vertical, 2)
             }
-            .frame(height: 56)
-            .background(Color(nsColor: .windowBackgroundColor))
-            .padding(.bottom, 10)
+            .frame(height: 88)
 
             if wallpapers.isEmpty {
                 Text("Import wallpapers to start building your library.")
                     .font(.footnote)
                     .foregroundColor(.secondary)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 10)
+                    .padding(.top, 2)
             }
         }
+        .padding(.top, 6)
     }
 
     private func initialize() {
@@ -271,7 +267,7 @@ struct WallpaperLibraryView: View {
                         self.wallpapers = records
                         self.isImporting = false
                         if let last = imported.last {
-                            self.previewSelection = .wallpaper(last.id)
+                            self.selectWallpaper(last)
                         } else {
                             self.alignSelectionWithLibrary()
                         }
@@ -291,9 +287,51 @@ struct WallpaperLibraryView: View {
         loadCurrentDesktop()
     }
 
+    private func selectCurrentDesktop() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            previewSelection = .currentDesktop
+        }
+        loadCurrentDesktop()
+    }
+
+    private func selectWallpaper(_ record: WallpaperRecord) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            previewSelection = .wallpaper(record.id)
+        }
+
+        let previewEntry = PlaylistEntryRecord(
+            id: UUID(),
+            order: 0,
+            lightWallpaper: record,
+            darkWallpaper: nil
+        )
+        let previewPlaylist = PlaylistRecord(
+            id: UUID(),
+            name: "Library Preview",
+            intervalMinutes: 0,
+            createdAt: Date(),
+            playbackMode: .sequential,
+            multiDisplayPolicy: .mirror,
+            entries: [previewEntry],
+            displayAssignments: []
+        )
+
+        let applied = services.wallpaperService.apply(entry: previewEntry, from: previewPlaylist)
+        if applied {
+            loadCurrentDesktop()
+        } else {
+            services.errorManager.handle(
+                AppError.wallpaperApplicationFailed("Unable to set \(record.displayName)."),
+                context: "applying wallpaper from library"
+            )
+        }
+    }
+
     private func toggleRotation() {
         services.schedulerCoordinator.toggleRotation()
-        updateRotationStatus()
+        withAnimation(.easeInOut(duration: 0.2)) {
+            updateRotationStatus()
+        }
     }
 
     private func updateRotationStatus() {
@@ -306,7 +344,9 @@ struct WallpaperLibraryView: View {
                 try await services.wallpaperService.deleteWallpaper(id: record.id)
                 await MainActor.run {
                     if previewSelection == .wallpaper(record.id) {
-                        previewSelection = .currentDesktop
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            previewSelection = .currentDesktop
+                        }
                     }
                 }
                 loadLibrary()
@@ -360,7 +400,7 @@ struct WallpaperLibraryView: View {
     }
 }
 
-private enum PreviewSelection: Equatable {
+private enum PreviewSelection: Hashable {
     case currentDesktop
     case wallpaper(UUID)
 }
@@ -376,16 +416,23 @@ private struct FileInfo: Equatable {
 private struct FileInfoRow: View {
     let label: String
     let value: String
+    var emphasis: Emphasis = .standard
+
+    enum Emphasis {
+        case standard
+        case high
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 1) {
             Text(label)
                 .font(.caption)
                 .foregroundColor(.secondary)
             Text(value)
-                .font(.callout)
-                .lineLimit(2)
+                .font(emphasis == .high ? .title3.weight(.semibold) : .callout)
+                .lineLimit(emphasis == .high ? 2 : 3)
                 .truncationMode(.middle)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -418,7 +465,7 @@ private struct CurrentDesktopPreview: View {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()
-                    .padding(12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else if isLoading {
                 ProgressView()
                     .controlSize(.large)
@@ -442,7 +489,7 @@ private struct WallpaperPreview: View {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()
-                    .padding(12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else if isMissing {
                 MissingPreviewPlaceholder(message: "This file can no longer be accessed.")
             } else {
@@ -493,32 +540,47 @@ private struct WallpaperPreview: View {
 }
 
 private struct LibraryFilmstripItem<Thumbnail: View>: View {
+    enum Style {
+        case regular
+        case add
+    }
+
     let title: String
     let isSelected: Bool
+    var style: Style = .regular
     let action: () -> Void
     @ViewBuilder var thumbnail: () -> Thumbnail
 
+    private var thumbnailWidth: CGFloat {
+        style == .add ? 74 : 88
+    }
+
+    private var thumbnailHeight: CGFloat {
+        style == .add ? 50 : 56
+    }
+
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
+            VStack(spacing: 4) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(Color(nsColor: .controlBackgroundColor))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 3)
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
                         )
                     thumbnail()
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .padding(style == .add ? 0 : 2)
                 }
-                .frame(width: 70, height: 44)
+                .frame(width: thumbnailWidth, height: thumbnailHeight)
 
                 Text(title)
                     .font(.caption2)
-                    .foregroundColor(.primary)
-                    .frame(width: 70)
+                    .foregroundColor(.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
+                    .frame(minWidth: thumbnailWidth, maxWidth: thumbnailWidth, alignment: .center)
             }
         }
         .buttonStyle(.plain)
@@ -530,7 +592,7 @@ private struct AddWallpaperThumbnail: View {
         ZStack {
             Color.clear
             Image(systemName: "plus")
-                .font(.system(size: 32, weight: .semibold))
+                .font(.system(size: 22, weight: .semibold))
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

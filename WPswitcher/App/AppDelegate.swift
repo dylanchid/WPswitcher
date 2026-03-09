@@ -6,6 +6,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var services: ServiceRegistry?
     private var mainWindowController: NSWindowController?
     private let mainWindowFrameKey = "MainWindowFrame"
+    private let mainWindowFrameScaleVersionKey = "MainWindowFrameScaleVersion"
+    private let mainWindowFrameScaleVersion = 1
+    private let defaultMainWindowSize = NSSize(width: 480, height: 300)
+    private let minimumMainWindowSize = NSSize(width: 405, height: 270)
 
     func configure(with services: ServiceRegistry) {
         self.services = services
@@ -36,6 +40,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func buildMainWindow() {
         guard let services else { return }
+        migrateSavedMainWindowFrameIfNeeded()
+
         let rootView = MainWindowView()
             .environmentObject(services)
 
@@ -43,7 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let window = NSWindow(contentViewController: hostingController)
         window.title = "WPswitcher"
         if loadMainWindowFrame() == nil {
-            window.setContentSize(NSSize(width: 640, height: 400))
+            window.setContentSize(defaultMainWindowSize)
         }
         window.setFrameAutosaveName("MainWindow")
         // Keep compact appearance while allowing toolbar-hosted controls.
@@ -125,6 +131,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let defaults = UserDefaults.standard
         guard let frameString = defaults.string(forKey: mainWindowFrameKey) else { return nil }
         return NSRectFromString(frameString)
+    }
+
+    private func migrateSavedMainWindowFrameIfNeeded() {
+        let defaults = UserDefaults.standard
+        let savedVersion = defaults.integer(forKey: mainWindowFrameScaleVersionKey)
+        guard savedVersion < mainWindowFrameScaleVersion else { return }
+        defer {
+            defaults.set(mainWindowFrameScaleVersion, forKey: mainWindowFrameScaleVersionKey)
+        }
+
+        guard let frameString = defaults.string(forKey: mainWindowFrameKey) else { return }
+        var frame = NSRectFromString(frameString)
+        guard frame.width > 0, frame.height > 0 else { return }
+
+        let shouldScale = frame.width > defaultMainWindowSize.width || frame.height > defaultMainWindowSize.height
+        guard shouldScale else { return }
+
+        let scaledSize = NSSize(
+            width: max(minimumMainWindowSize.width, frame.width * 0.75),
+            height: max(minimumMainWindowSize.height, frame.height * 0.75)
+        )
+
+        let widthDelta = frame.width - scaledSize.width
+        let heightDelta = frame.height - scaledSize.height
+        frame.origin.x += widthDelta / 2
+        frame.origin.y += heightDelta / 2
+        frame.size = scaledSize
+
+        defaults.set(NSStringFromRect(frame), forKey: mainWindowFrameKey)
     }
 
     private func saveMainWindowFrame(_ frame: NSRect) {

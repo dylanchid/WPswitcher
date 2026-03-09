@@ -27,7 +27,7 @@ struct MainWindowView: View {
                     }
                 }
         }
-        .frame(minWidth: 560, minHeight: 380)
+        .frame(minWidth: 405, minHeight: 270)
         .background(Color(nsColor: .windowBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .onAppear(perform: refreshPlaylists)
@@ -96,7 +96,18 @@ struct MainWindowView: View {
     private var detailContent: some View {
         switch selection ?? .library {
         case .library:
-            WallpaperLibraryView()
+            LibraryDashboardView(
+                playlists: playlists,
+                selectedPlaylistID: selectedPlaylistID,
+                playlistError: playlistError,
+                onSelectPlaylist: { id in
+                    selection = .playlist(id)
+                },
+                onPlayNow: applyPlaylistNow,
+                onDeletePlaylist: deletePlaylist,
+                previewTextProvider: previewText,
+                canPlayProvider: canPlay
+            )
         case .playlist(let id):
             if let playlist = playlists.first(where: { $0.id == id }) {
                 PlaylistEditorHost(
@@ -161,6 +172,10 @@ struct MainWindowView: View {
             return "Ready to preview"
         }
         return "Add wallpapers to preview"
+    }
+
+    private func canPlay(_ playlist: PlaylistRecord) -> Bool {
+        playableEntry(for: playlist) != nil
     }
 
     private func applyPlaylistNow(_ playlist: PlaylistRecord) {
@@ -237,6 +252,88 @@ struct MainWindowView: View {
 
     private func quitApplication() {
         NSApp.terminate(nil)
+    }
+}
+
+private struct LibraryDashboardView: View {
+    let playlists: [PlaylistRecord]
+    let selectedPlaylistID: UUID?
+    let playlistError: String?
+    let onSelectPlaylist: (UUID) -> Void
+    let onPlayNow: (PlaylistRecord) -> Void
+    let onDeletePlaylist: (UUID) -> Void
+    let previewTextProvider: (PlaylistRecord) -> String
+    let canPlayProvider: (PlaylistRecord) -> Bool
+
+    var body: some View {
+        VStack(spacing: 0) {
+            WallpaperLibraryView()
+                .frame(minHeight: 250)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Playlists")
+                        .font(.headline)
+                    Spacer()
+                    Text("\(playlists.count) item\(playlists.count == 1 ? "" : "s")")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+
+                if let playlistError {
+                    Text(playlistError)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .padding(.horizontal, 16)
+                }
+
+                if playlists.isEmpty {
+                    EmptyPlaylistPlaceholder()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
+                } else {
+                    CompactPlaylistGrid(
+                        playlists: playlists,
+                        selectedPlaylistID: selectedPlaylistID,
+                        onSelectPlaylist: onSelectPlaylist,
+                        onPlayNow: onPlayNow,
+                        onDelete: onDeletePlaylist,
+                        previewTextProvider: previewTextProvider,
+                        canPlayProvider: canPlayProvider
+                    )
+                }
+            }
+            .frame(minHeight: 196, maxHeight: .infinity, alignment: .top)
+            .background(Color(nsColor: .windowBackgroundColor))
+        }
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+}
+
+private struct EmptyPlaylistPlaceholder: View {
+    var body: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "music.note.list")
+                .font(.system(size: 30))
+                .foregroundStyle(.secondary)
+            Text("No Playlists Yet")
+                .font(.headline)
+            Text("Create a playlist from the sidebar to start scheduling rotations.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
     }
 }
 
