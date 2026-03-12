@@ -218,6 +218,52 @@ final class DefaultSchedulerCoordinatorTests: XCTestCase {
         }
     }
 
+    func testAdvancePostsRotationNotification() async throws {
+        let playlist = makePlaylist(name: "Only", createdAt: Date(timeIntervalSince1970: 100))
+        let playlistStore = MockPlaylistStore(playlists: [playlist])
+        let wallpaperService = MockWallpaperService()
+        let stateCenter = NotificationCenter()
+        let workspaceCenter = NotificationCenter()
+        let playlistCenter = NotificationCenter()
+        let lock = NSLock()
+        var rotatedPlaylistIDs: [UUID] = []
+
+        let observer = stateCenter.addObserver(
+            forName: .schedulerCoordinatorDidRotateWallpaper,
+            object: nil,
+            queue: nil
+        ) { notification in
+            if let playlistID = notification.userInfo?[SchedulerNotificationKey.playlistID] as? UUID {
+                lock.withLock {
+                    rotatedPlaylistIDs.append(playlistID)
+                }
+            }
+        }
+        defer { stateCenter.removeObserver(observer) }
+
+        let coordinator = DefaultSchedulerCoordinator(
+            playlistStore: playlistStore,
+            wallpaperService: wallpaperService,
+            workspaceNotificationCenter: workspaceCenter,
+            playlistNotificationCenter: playlistCenter,
+            notificationCenter: stateCenter,
+            queue: DispatchQueue(label: "DefaultSchedulerCoordinatorTests.rotationQueue")
+        )
+
+        coordinator.start()
+        await waitUntil("active playlist before advance") {
+            coordinator.activePlaylistID == playlist.id
+        }
+
+        coordinator.advance()
+
+        await waitUntil("rotation notification after advance") {
+            lock.withLock { rotatedPlaylistIDs.contains(playlist.id) }
+        }
+
+        coordinator.pause()
+    }
+
     private func makePlaylist(name: String, createdAt: Date) -> PlaylistRecord {
         let wallpaper = WallpaperRecord(
             id: UUID(),

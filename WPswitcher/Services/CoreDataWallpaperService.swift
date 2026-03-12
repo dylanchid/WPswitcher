@@ -48,6 +48,13 @@ final class CoreDataWallpaperService: WallpaperService {
 
         let preferDark = isDarkAppearanceActive()
         let defaultWallpaper = wallpaper(for: entry, preferDark: preferDark)
+        let displayIDs = screens.map { displayIdentifier(for: $0) }
+        let routedWallpapers = wallpaperAssignments(
+            for: entry,
+            playlist: playlist,
+            displayIdentifiers: displayIDs,
+            preferDark: preferDark
+        )
 
         var appliedAny = false
 
@@ -61,13 +68,9 @@ final class CoreDataWallpaperService: WallpaperService {
             }
             appliedAny = apply(wallpaper: wallpaper, to: screens, playlistName: playlist.name)
         case .perDisplay:
-            let assignments = assignmentLookup(for: playlist.displayAssignments)
-            for screen in screens {
-                let identifier = displayIdentifier(for: screen)
-                let assignmentWallpaper = identifier.flatMap { id in
-                    assignments[id].flatMap { wallpaper(for: $0, preferDark: preferDark) }
-                }
-                guard let wallpaper = assignmentWallpaper ?? defaultWallpaper else {
+            for (index, screen) in screens.enumerated() {
+                let identifier = displayIDs[index]
+                guard let wallpaper = identifier.flatMap({ routedWallpapers[$0] }) ?? defaultWallpaper else {
                     logger.warning(
                         "No wallpaper resolved for screen \(identifier ?? "unknown", privacy: .public) in playlist \(playlist.name, privacy: .public)"
                     )
@@ -238,6 +241,30 @@ final class CoreDataWallpaperService: WallpaperService {
 
     func availableDisplays() -> [DisplayDescriptor] {
         displayProvider()
+    }
+
+    func wallpaperAssignments(
+        for entry: PlaylistEntryRecord,
+        playlist: PlaylistRecord,
+        displayIdentifiers: [String?],
+        preferDark: Bool
+    ) -> [String: WallpaperRecord] {
+        guard playlist.multiDisplayPolicy == .perDisplay else { return [:] }
+
+        let assignments = assignmentLookup(for: playlist.displayAssignments)
+        let defaultWallpaper = wallpaper(for: entry, preferDark: preferDark)
+        var routed: [String: WallpaperRecord] = [:]
+
+        for identifier in displayIdentifiers {
+            guard let identifier else { continue }
+            if let assignmentWallpaper = assignments[identifier].flatMap({ wallpaper(for: $0, preferDark: preferDark) }) {
+                routed[identifier] = assignmentWallpaper
+            } else if let defaultWallpaper {
+                routed[identifier] = defaultWallpaper
+            }
+        }
+
+        return routed
     }
 
     // MARK: - Helpers

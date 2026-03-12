@@ -79,6 +79,98 @@ final class CoreDataWallpaperServiceTests: XCTestCase {
         XCTAssertEqual(lookup["DISPLAY-1"]?.id, duplicate.id)
     }
 
+    func testAvailableDisplaysReturnsInjectedDescriptors() {
+        let expected = [
+            DisplayDescriptor(id: "200", name: "Projector"),
+            DisplayDescriptor(id: "100", name: "Studio Display")
+        ]
+        let service = CoreDataWallpaperService(
+            persistence: persistence,
+            playlistStore: playlistStore,
+            displayProvider: { expected }
+        )
+
+        XCTAssertEqual(service.availableDisplays(), expected)
+    }
+
+    func testWallpaperAssignmentsPreferPerDisplayMatchBeforeFallback() {
+        let defaultWallpaper = makeWallpaperRecord(name: "default")
+        let assignedWallpaper = makeWallpaperRecord(name: "assigned")
+        let entry = PlaylistEntryRecord(
+            id: UUID(),
+            order: 0,
+            lightWallpaper: defaultWallpaper,
+            darkWallpaper: nil
+        )
+        let playlist = PlaylistRecord(
+            id: UUID(),
+            name: "Displays",
+            intervalMinutes: 15,
+            createdAt: Date(),
+            playbackMode: .sequential,
+            multiDisplayPolicy: .perDisplay,
+            entries: [entry],
+            displayAssignments: [
+                DisplayAssignmentRecord(
+                    id: UUID(),
+                    displayID: "DISPLAY-2",
+                    order: 0,
+                    lightWallpaper: assignedWallpaper,
+                    darkWallpaper: nil
+                )
+            ]
+        )
+
+        let routed = service.wallpaperAssignments(
+            for: entry,
+            playlist: playlist,
+            displayIdentifiers: ["DISPLAY-1", "DISPLAY-2", nil],
+            preferDark: false
+        )
+
+        XCTAssertEqual(routed["DISPLAY-1"]?.id, defaultWallpaper.id)
+        XCTAssertEqual(routed["DISPLAY-2"]?.id, assignedWallpaper.id)
+        XCTAssertEqual(routed.count, 2)
+    }
+
+    func testWallpaperAssignmentsUseDarkVariantForPerDisplayMatch() {
+        let lightWallpaper = makeWallpaperRecord(name: "light")
+        let darkWallpaper = makeWallpaperRecord(name: "dark")
+        let entry = PlaylistEntryRecord(
+            id: UUID(),
+            order: 0,
+            lightWallpaper: lightWallpaper,
+            darkWallpaper: nil
+        )
+        let playlist = PlaylistRecord(
+            id: UUID(),
+            name: "Displays",
+            intervalMinutes: 15,
+            createdAt: Date(),
+            playbackMode: .sequential,
+            multiDisplayPolicy: .perDisplay,
+            entries: [entry],
+            displayAssignments: [
+                DisplayAssignmentRecord(
+                    id: UUID(),
+                    displayID: "DISPLAY-1",
+                    order: 0,
+                    lightWallpaper: lightWallpaper,
+                    darkWallpaper: darkWallpaper
+                )
+            ]
+        )
+
+        let routed = service.wallpaperAssignments(
+            for: entry,
+            playlist: playlist,
+            displayIdentifiers: ["DISPLAY-1"],
+            preferDark: true
+        )
+
+        XCTAssertEqual(routed["DISPLAY-1"]?.id, darkWallpaper.id)
+    }
+
     // MARK: - Helpers
 
     @discardableResult
@@ -87,5 +179,15 @@ final class CoreDataWallpaperServiceTests: XCTestCase {
         let pngData = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HwAFAAL/9lRtNwAAAABJRU5ErkJggg==")!
         try pngData.write(to: destination)
         return destination
+    }
+
+    private func makeWallpaperRecord(name: String) -> WallpaperRecord {
+        WallpaperRecord(
+            id: UUID(),
+            url: URL(fileURLWithPath: "/tmp/\(name).jpg"),
+            displayName: "\(name).jpg",
+            createdAt: Date(),
+            bookmarkData: nil
+        )
     }
 }
