@@ -32,10 +32,19 @@
 		F1A2B3C62F00000100A1B2C3 /* ErrorManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C42F00000100A1B2C3 /* ErrorManagerTests.swift */; };
 		F1A2B3C72F00000100A1B2C3 /* DefaultSchedulerCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C52F00000100A1B2C3 /* DefaultSchedulerCoordinatorTests.swift */; };
 		E5637F3CF772F26BCA3D0635 /* CompactPlaylistGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5637F3CF772F26BCA3D0634 /* CompactPlaylistGrid.swift */; };
+		F2A1B3D22F10000100A1B2C3 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A1B3C32F10000100A1B2C3 /* AppEnvironment.swift */; };
+		F2A1B3C82F10000100A1B2C3 /* WPswitcherUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A1B3C62F10000100A1B2C3 /* WPswitcherUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
 		00B8A9B52C7E7F2C00A5E9F1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 00B8A99A2C7E7F2B00A5E9F1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 00B8A99C2C7E7F2B00A5E9F1;
+			remoteInfo = WPswitcher;
+		};
+		F2A1B3CB2F10000100A1B2C3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 00B8A99A2C7E7F2B00A5E9F1 /* Project object */;
 			proxyType = 1;
@@ -74,6 +83,10 @@
 		00B8AC062C7E8AAB00A5E9F1 /* SystemAppearanceObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAppearanceObserver.swift; sourceTree = "<group>"; };
 		F1A2B3C42F00000100A1B2C3 /* ErrorManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorManagerTests.swift; sourceTree = "<group>"; };
 		F1A2B3C52F00000100A1B2C3 /* DefaultSchedulerCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultSchedulerCoordinatorTests.swift; sourceTree = "<group>"; };
+		F2A1B3C32F10000100A1B2C3 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
+		F2A1B3C52F10000100A1B2C3 /* WPswitcherUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WPswitcherUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F2A1B3C62F10000100A1B2C3 /* WPswitcherUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WPswitcherUITests.swift; sourceTree = "<group>"; };
+		F2A1B3C72F10000100A1B2C3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -91,6 +104,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F2A1B3C92F10000100A1B2C3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -99,6 +119,7 @@
 			children = (
 				00B8A9A32C7E7F2C00A5E9F1 /* WPswitcher */,
 				00B8AA022C7E7F2D00A5E9F1 /* WPswitcherTests */,
+				F2A1B3D32F10000100A1B2C3 /* WPswitcherUITests */,
 				00B8A9B42C7E7F2C00A5E9F1,
 			);
 			sourceTree = "<group>";
@@ -122,6 +143,7 @@
 			children = (
 				00B8A9A52C7E7F2C00A5E9F1 /* WPswitcherApp.swift */,
 				00B8A9A42C7E7F2C00A5E9F1 /* AppDelegate.swift */,
+				F2A1B3C32F10000100A1B2C3 /* AppEnvironment.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -160,6 +182,7 @@
 			children = (
 				00B8A9B02C7E7F2C00A5E9F1 /* WPswitcher.app */,
 				00B8A9B12C7E7F2C00A5E9F1 /* WPswitcherTests.xctest */,
+				F2A1B3C52F10000100A1B2C3 /* WPswitcherUITests.xctest */,
 			);
 			sourceTree = "<group>";
 		};
@@ -174,6 +197,15 @@
 				00B8AA012C7E7F2D00A5E9F1 /* Info.plist */,
 			);
 			path = WPswitcherTests;
+			sourceTree = "<group>";
+		};
+		F2A1B3D32F10000100A1B2C3 /* WPswitcherUITests */ = {
+			isa = PBXGroup;
+			children = (
+				F2A1B3C62F10000100A1B2C3 /* WPswitcherUITests.swift */,
+				F2A1B3C72F10000100A1B2C3 /* Info.plist */,
+			);
+			path = WPswitcherUITests;
 			sourceTree = "<group>";
 		};
 		00B8AA182C7E7F2D00A5E9F1 /* Models */ = {
@@ -245,6 +277,24 @@
 			productReference = 00B8A9B12C7E7F2C00A5E9F1 /* WPswitcherTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		F2A1B3CA2F10000100A1B2C3 /* WPswitcherUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F2A1B3D12F10000100A1B2C3 /* Build configuration list for PBXNativeTarget "WPswitcherUITests" */;
+			buildPhases = (
+				F2A1B3CE2F10000100A1B2C3 /* Sources */,
+				F2A1B3C92F10000100A1B2C3 /* Frameworks */,
+				F2A1B3CC2F10000100A1B2C3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F2A1B3CD2F10000100A1B2C3 /* PBXTargetDependency */,
+			);
+			name = WPswitcherUITests;
+			productName = WPswitcherUITests;
+			productReference = F2A1B3C52F10000100A1B2C3 /* WPswitcherUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -259,6 +309,10 @@
 						CreatedOnToolsVersion = 15.1;
 					};
 					00B8A99D2C7E7F2B00A5E9F1 = {
+						CreatedOnToolsVersion = 15.1;
+						TestTargetID = 00B8A99C2C7E7F2B00A5E9F1;
+					};
+					F2A1B3CA2F10000100A1B2C3 = {
 						CreatedOnToolsVersion = 15.1;
 						TestTargetID = 00B8A99C2C7E7F2B00A5E9F1;
 					};
@@ -278,6 +332,7 @@
 			targets = (
 				00B8A99C2C7E7F2B00A5E9F1 /* WPswitcher */,
 				00B8A99D2C7E7F2B00A5E9F1 /* WPswitcherTests */,
+				F2A1B3CA2F10000100A1B2C3 /* WPswitcherUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -293,6 +348,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		00B8AA032C7E7F2D00A5E9F1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F2A1B3CC2F10000100A1B2C3 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -319,6 +381,7 @@
 				00B8A9AA2C7E7F2C00A5E9F1 /* SettingsView.swift in Sources */,
 				00B8A9A82C7E7F2C00A5E9F1 /* WPswitcherApp.swift in Sources */,
 				00B8A9A92C7E7F2C00A5E9F1 /* AppDelegate.swift in Sources */,
+				F2A1B3D22F10000100A1B2C3 /* AppEnvironment.swift in Sources */,
 				00B8AA062C7E7F2D00A5E9F1 /* ServiceProtocols.swift in Sources */,
 				00B8AA082C7E7F2D00A5E9F1 /* ServiceRegistry.swift in Sources */,
 				00B8AC072C7E8AAB00A5E9F1 /* SystemAppearanceObserver.swift in Sources */,
@@ -339,6 +402,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F2A1B3CE2F10000100A1B2C3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F2A1B3C82F10000100A1B2C3 /* WPswitcherUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -346,6 +417,11 @@
 			isa = PBXTargetDependency;
 			target = 00B8A99C2C7E7F2B00A5E9F1 /* WPswitcher */;
 			targetProxy = 00B8A9B52C7E7F2C00A5E9F1 /* PBXContainerItemProxy */;
+		};
+		F2A1B3CD2F10000100A1B2C3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 00B8A99C2C7E7F2B00A5E9F1 /* WPswitcher */;
+			targetProxy = F2A1B3CB2F10000100A1B2C3 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -556,6 +632,42 @@
 			};
 			name = Release;
 		};
+		F2A1B3CF2F10000100A1B2C3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
+				INFOPLIST_FILE = WPswitcherUITests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.WPswitcherUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = WPswitcher;
+			};
+			name = Debug;
+		};
+		F2A1B3D02F10000100A1B2C3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
+				INFOPLIST_FILE = WPswitcherUITests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.WPswitcherUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = WPswitcher;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -582,6 +694,15 @@
 			buildConfigurations = (
 				00B8A9B82C7E7F2C00A5E9F1 /* Debug */,
 				00B8A9BA2C7E7F2C00A5E9F1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F2A1B3D12F10000100A1B2C3 /* Build configuration list for PBXNativeTarget "WPswitcherUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F2A1B3CF2F10000100A1B2C3 /* Debug */,
+				F2A1B3D02F10000100A1B2C3 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

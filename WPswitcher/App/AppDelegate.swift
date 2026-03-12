@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem?
     private var services: ServiceRegistry?
     private var mainWindowController: NSWindowController?
+    private let userDefaults = AppEnvironment.userDefaults
     private let mainWindowFrameKey = "MainWindowFrame"
     private let mainWindowFrameScaleVersionKey = "MainWindowFrameScaleVersion"
     private let mainWindowFrameScaleVersion = 1
@@ -16,7 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        NSApp.setActivationPolicy(AppEnvironment.isUITesting ? .regular : .accessory)
 
         let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
@@ -49,6 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let hostingController = NSHostingController(rootView: rootView)
         let window = NSWindow(contentViewController: hostingController)
         window.title = "WPswitcher"
+        window.identifier = NSUserInterfaceItemIdentifier("mainWindow")
         if loadMainWindowFrame() == nil {
             window.setContentSize(defaultMainWindowSize)
         }
@@ -85,6 +87,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         window.makeKeyAndOrderFront(nil)
     }
 
+    func showMainWindowFromCommand() {
+        showMainWindow()
+    }
+
+    func hideMainWindowFromCommand() {
+        hideMainWindow()
+    }
+
     private func hideMainWindow() {
         if let window = mainWindowController?.window {
             saveMainWindowFrame(window.frame)
@@ -103,6 +113,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         saveMainWindowFrame(sender.frame)
+        return true
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag {
+            showMainWindow()
+        }
         return true
     }
 
@@ -129,20 +146,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func loadMainWindowFrame() -> NSRect? {
-        let defaults = UserDefaults.standard
-        guard let frameString = defaults.string(forKey: mainWindowFrameKey) else { return nil }
+        guard let frameString = userDefaults.string(forKey: mainWindowFrameKey) else { return nil }
         return NSRectFromString(frameString)
     }
 
     private func migrateSavedMainWindowFrameIfNeeded() {
-        let defaults = UserDefaults.standard
-        let savedVersion = defaults.integer(forKey: mainWindowFrameScaleVersionKey)
+        let savedVersion = userDefaults.integer(forKey: mainWindowFrameScaleVersionKey)
         guard savedVersion < mainWindowFrameScaleVersion else { return }
         defer {
-            defaults.set(mainWindowFrameScaleVersion, forKey: mainWindowFrameScaleVersionKey)
+            userDefaults.set(mainWindowFrameScaleVersion, forKey: mainWindowFrameScaleVersionKey)
         }
 
-        guard let frameString = defaults.string(forKey: mainWindowFrameKey) else { return }
+        guard let frameString = userDefaults.string(forKey: mainWindowFrameKey) else { return }
         var frame = NSRectFromString(frameString)
         guard frame.width > 0, frame.height > 0 else { return }
 
@@ -160,11 +175,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         frame.origin.y += heightDelta / 2
         frame.size = scaledSize
 
-        defaults.set(NSStringFromRect(frame), forKey: mainWindowFrameKey)
+        userDefaults.set(NSStringFromRect(frame), forKey: mainWindowFrameKey)
     }
 
     private func saveMainWindowFrame(_ frame: NSRect) {
-        let defaults = UserDefaults.standard
-        defaults.set(NSStringFromRect(frame), forKey: mainWindowFrameKey)
+        userDefaults.set(NSStringFromRect(frame), forKey: mainWindowFrameKey)
     }
 }
