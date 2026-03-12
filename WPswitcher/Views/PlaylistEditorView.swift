@@ -112,6 +112,8 @@ struct PlaylistEditorView: View {
                                         isLast: index == viewModel.displayAssignments.count - 1,
                                         assignment: $viewModel.displayAssignments[index],
                                         library: viewModel.wallpapers,
+                                        displays: viewModel.availableDisplays,
+                                        displayLabel: viewModel.labelForDisplay(id:),
                                         moveUp: { viewModel.moveDisplayAssignmentUp(at: index) },
                                         moveDown: { viewModel.moveDisplayAssignmentDown(at: index) },
                                         remove: { viewModel.removeDisplayAssignment(at: index) }
@@ -244,6 +246,8 @@ private struct DisplayAssignmentRow: View {
     let isLast: Bool
     @Binding var assignment: PlaylistEditorViewModel.DisplayAssignment
     let library: [WallpaperRecord]
+    let displays: [DisplayDescriptor]
+    let displayLabel: (String) -> String
     let moveUp: () -> Void
     let moveDown: () -> Void
     let remove: () -> Void
@@ -273,7 +277,21 @@ private struct DisplayAssignmentRow: View {
                 .buttonStyle(.borderless)
             }
 
-            TextField("Display Identifier", text: $assignment.displayID)
+            if displays.isEmpty {
+                Text("No connected displays detected.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                Picker("Display", selection: $assignment.displayID) {
+                    ForEach(displays) { display in
+                        Text(display.name).tag(display.id)
+                    }
+                }
+                .controlSize(.small)
+                Text("Identifier: \(displayLabel(assignment.displayID))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             WallpaperPicker(
                 title: "Light Mode Wallpaper",
                 selection: $assignment.lightWallpaperId,

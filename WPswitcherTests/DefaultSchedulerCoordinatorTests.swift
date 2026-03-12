@@ -172,6 +172,52 @@ final class DefaultSchedulerCoordinatorTests: XCTestCase {
         coordinator.pause()
     }
 
+    func testCoordinatorPostsStateNotifications() async throws {
+        let playlist = makePlaylist(name: "Only", createdAt: Date(timeIntervalSince1970: 100))
+        let playlistStore = MockPlaylistStore(playlists: [playlist])
+        let wallpaperService = MockWallpaperService()
+        let stateCenter = NotificationCenter()
+        let workspaceCenter = NotificationCenter()
+        let playlistCenter = NotificationCenter()
+        let lock = NSLock()
+        var payloads: [[AnyHashable: Any]] = []
+
+        let observer = stateCenter.addObserver(
+            forName: .schedulerCoordinatorStateDidChange,
+            object: nil,
+            queue: nil
+        ) { notification in
+            lock.withLock {
+                payloads.append(notification.userInfo ?? [:])
+            }
+        }
+        defer { stateCenter.removeObserver(observer) }
+
+        let coordinator = DefaultSchedulerCoordinator(
+            playlistStore: playlistStore,
+            wallpaperService: wallpaperService,
+            workspaceNotificationCenter: workspaceCenter,
+            playlistNotificationCenter: playlistCenter,
+            notificationCenter: stateCenter,
+            queue: DispatchQueue(label: "DefaultSchedulerCoordinatorTests.stateQueue")
+        )
+
+        coordinator.start()
+        await waitUntil("scheduler state start notification") {
+            lock.withLock { payloads.contains(where: { ($0[SchedulerNotificationKey.isRunning] as? Bool) == true }) }
+        }
+        await waitUntil("scheduler active playlist notification") {
+            lock.withLock {
+                payloads.contains(where: { ($0[SchedulerNotificationKey.activePlaylistID] as? UUID) == playlist.id })
+            }
+        }
+
+        coordinator.pause()
+        await waitUntil("scheduler state pause notification") {
+            lock.withLock { payloads.contains(where: { ($0[SchedulerNotificationKey.isRunning] as? Bool) == false }) }
+        }
+    }
+
     private func makePlaylist(name: String, createdAt: Date) -> PlaylistRecord {
         let wallpaper = WallpaperRecord(
             id: UUID(),
@@ -311,6 +357,10 @@ private final class MockWallpaperService: WallpaperService {
 
     func resolveAccess(for wallpaper: WallpaperRecord) -> WallpaperResolution {
         .missing
+    }
+
+    func availableDisplays() -> [DisplayDescriptor] {
+        []
     }
 }
 

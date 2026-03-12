@@ -13,18 +13,29 @@ final class CoreDataWallpaperService: WallpaperService {
     private let playlistStore: PlaylistStore
     private let fileManager: FileManager
     private let notificationCenter: NotificationCenter
+    private let displayProvider: () -> [DisplayDescriptor]
     private let logger = Logger(subsystem: "com.example.WPswitcher", category: "WallpaperService")
 
     init(
         persistence: PersistenceController,
         playlistStore: PlaylistStore,
         fileManager: FileManager = .default,
-        notificationCenter: NotificationCenter = .default
+        notificationCenter: NotificationCenter = .default,
+        displayProvider: (() -> [DisplayDescriptor])? = nil
     ) {
         self.persistence = persistence
         self.playlistStore = playlistStore
         self.fileManager = fileManager
         self.notificationCenter = notificationCenter
+        self.displayProvider = displayProvider ?? {
+            if Thread.isMainThread {
+                return Self.defaultDisplayDescriptors(from: NSScreen.screens)
+            } else {
+                return DispatchQueue.main.sync {
+                    Self.defaultDisplayDescriptors(from: NSScreen.screens)
+                }
+            }
+        }
     }
 
     @discardableResult
@@ -225,6 +236,10 @@ final class CoreDataWallpaperService: WallpaperService {
         return .missing
     }
 
+    func availableDisplays() -> [DisplayDescriptor] {
+        displayProvider()
+    }
+
     // MARK: - Helpers
 
     func assignmentLookup(for assignments: [DisplayAssignmentRecord]) -> [String: DisplayAssignmentRecord] {
@@ -394,6 +409,44 @@ final class CoreDataWallpaperService: WallpaperService {
             DispatchQueue.main.sync(execute: evaluate)
         }
         return isDark
+    }
+
+    private static func defaultDisplayDescriptors(from screens: [NSScreen]) -> [DisplayDescriptor] {
+        var descriptors: [DisplayDescriptor] = []
+        var seenIDs: Set<String> = []
+
+        for (index, screen) in screens.enumerated() {
+            guard let identifier = displayIdentifier(for: screen)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !identifier.isEmpty,
+                  seenIDs.insert(identifier).inserted else {
+                continue
+            }
+
+            let fallbackName = "Display \(index + 1)"
+            let name: String
+            if #available(macOS 10.15, *) {
+                name = screen.localizedName.isEmpty ? fallbackName : screen.localizedName
+            } else {
+                name = fallbackName
+            }
+            descriptors.append(DisplayDescriptor(id: identifier, name: name))
+        }
+
+        return descriptors.sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+    }
+
+    private static func displayIdentifier(for screen: NSScreen) -> String? {
+        if let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber {
+            return number.stringValue
+        }
+
+        if #available(macOS 10.15, *) {
+            return screen.localizedName
+        }
+
+        return nil
     }
 }
 

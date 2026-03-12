@@ -41,6 +41,7 @@ final class PlaylistEditorViewModel: ObservableObject {
     }
 
     @Published private(set) var wallpapers: [WallpaperRecord] = []
+    @Published private(set) var availableDisplays: [DisplayDescriptor] = []
     @Published var errorMessage: String?
     @Published private(set) var isSaving = false
     @Published private(set) var hasUnsavedChanges = false
@@ -124,8 +125,10 @@ final class PlaylistEditorViewModel: ObservableObject {
         Task {
             do {
                 let libraryRecords = try await wallpaperService.fetchLibrary()
+                let displays = wallpaperService.availableDisplays()
                 errorMessage = nil
                 refreshWallpapersCache(using: lastKnownRecord, library: libraryRecords)
+                availableDisplays = displays
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -152,7 +155,7 @@ final class PlaylistEditorViewModel: ObservableObject {
     }
 
     func addDisplayAssignment() {
-        let identifier = nextDisplayIdentifier()
+        let identifier = nextAvailableDisplayID()
         displayAssignments.append(
             DisplayAssignment(id: UUID(), displayID: identifier, lightWallpaperId: nil, darkWallpaperId: nil)
         )
@@ -216,6 +219,14 @@ final class PlaylistEditorViewModel: ObservableObject {
                 return
             }
 
+            let knownDisplayIDs = Set(availableDisplays.map(\.id))
+            if !knownDisplayIDs.isEmpty,
+               let staleAssignment = normalizedAssignments.first(where: { !knownDisplayIDs.contains($0.2) }) {
+                errorMessage = "Display assignment '\(staleAssignment.2)' no longer matches a connected display."
+                isSaving = false
+                return
+            }
+
             var seenIdentifiers: Set<String> = []
             for assignment in normalizedAssignments {
                 let canonical = assignment.2.lowercased()
@@ -269,6 +280,10 @@ final class PlaylistEditorViewModel: ObservableObject {
 
             isSaving = false
         }
+    }
+
+    func labelForDisplay(id: String) -> String {
+        availableDisplays.first(where: { $0.id == id })?.name ?? id
     }
 
     func applyUpdatedRecord(_ record: PlaylistRecord) {
@@ -404,13 +419,15 @@ final class PlaylistEditorViewModel: ObservableObject {
     }
 
     private func nextDisplayIdentifier() -> String {
-        let base = "Display"
-        let existingNames = Set(displayAssignments.map { $0.displayID })
-        var index = displayAssignments.count + 1
-        while existingNames.contains("\(base) \(index)") {
-            index += 1
+        ""
+    }
+
+    private func nextAvailableDisplayID() -> String {
+        let used = Set(displayAssignments.map(\.displayID))
+        if let next = availableDisplays.first(where: { !used.contains($0.id) }) {
+            return next.id
         }
-        return "\(base) \(index)"
+        return availableDisplays.first?.id ?? nextDisplayIdentifier()
     }
 }
 

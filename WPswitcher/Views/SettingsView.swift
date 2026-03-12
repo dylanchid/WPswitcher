@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var activePlaylistSelection: UUID?
     @State private var isLoadingPlaylists = false
     @State private var playlistLoadError: String?
+    @State private var isRotationEnabled = false
 
     var body: some View {
         TabView(selection: $selection) {
@@ -25,10 +26,14 @@ struct SettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: .playlistStoreDidChange)) { _ in
             refreshPlaylists()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .schedulerCoordinatorStateDidChange)) { _ in
+            syncSchedulerState()
+        }
     }
 
     private func initialize() {
         checkLaunchAtLogin()
+        syncSchedulerState()
         refreshPlaylists()
     }
 
@@ -87,11 +92,19 @@ struct SettingsView: View {
         services.schedulerCoordinator.setActivePlaylist(id: fallback.id)
     }
 
+    private func syncSchedulerState() {
+        isRotationEnabled = services.schedulerCoordinator.isRunning
+        if let selected = services.schedulerCoordinator.activePlaylistID,
+           playlists.contains(where: { $0.id == selected }) {
+            activePlaylistSelection = selected
+        }
+    }
+
     private var generalSettings: some View {
-        let status = services.schedulerCoordinator.isRunning ? "Yes" : "No"
+        let status = isRotationEnabled ? "Yes" : "No"
         return Form {
             Toggle("Enable Rotation", isOn: Binding(
-                get: { services.schedulerCoordinator.isRunning },
+                get: { isRotationEnabled },
                 set: { enabled in
                     if enabled {
                         services.schedulerCoordinator.start()

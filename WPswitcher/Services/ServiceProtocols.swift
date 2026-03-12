@@ -2,6 +2,17 @@ import AppKit
 import Foundation
 import os.log
 
+extension Notification.Name {
+    static let schedulerCoordinatorStateDidChange = Notification.Name("com.example.WPswitcher.schedulerCoordinatorStateDidChange")
+    static let schedulerCoordinatorDidRotateWallpaper = Notification.Name("com.example.WPswitcher.schedulerCoordinatorDidRotateWallpaper")
+}
+
+enum SchedulerNotificationKey {
+    static let isRunning = "isRunning"
+    static let activePlaylistID = "activePlaylistID"
+    static let playlistID = "playlistID"
+}
+
 struct ScopedWallpaperURL {
     let url: URL
     let stopAccessing: () -> Void
@@ -12,12 +23,18 @@ enum WallpaperResolution {
     case missing
 }
 
+struct DisplayDescriptor: Identifiable, Equatable {
+    let id: String
+    let name: String
+}
+
 protocol WallpaperService {
     @discardableResult func apply(entry: PlaylistEntryRecord, from playlist: PlaylistRecord) -> Bool
     func fetchLibrary() async throws -> [WallpaperRecord]
     @discardableResult func importWallpapers(from urls: [URL]) async throws -> [WallpaperRecord]
     func deleteWallpaper(id: UUID) async throws
     func resolveAccess(for wallpaper: WallpaperRecord) -> WallpaperResolution
+    func availableDisplays() -> [DisplayDescriptor]
 }
 
 protocol PlaylistStore {
@@ -79,6 +96,10 @@ final class DefaultWallpaperService: WallpaperService {
         os_log("Resolve access for wallpaper (stub) %{public}@", wallpaper.id.uuidString)
         return .missing
     }
+
+    func availableDisplays() -> [DisplayDescriptor] {
+        []
+    }
 }
 
 final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendable {
@@ -99,6 +120,7 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
     private let workspace: NSWorkspace
     private let workspaceNotificationCenter: NotificationCenter
     private let playlistNotificationCenter: NotificationCenter
+    private let notificationCenter: NotificationCenter
     private let userDefaults: UserDefaults
     private let activePlaylistDefaultsKey: String
     private let dateProvider: () -> Date
@@ -127,6 +149,7 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
         workspace: NSWorkspace = .shared,
         workspaceNotificationCenter: NotificationCenter? = nil,
         playlistNotificationCenter: NotificationCenter = .default,
+        notificationCenter: NotificationCenter = .default,
         userDefaults: UserDefaults = .standard,
         activePlaylistDefaultsKey: String = "WPswitcher.ActivePlaylistID",
         dateProvider: @escaping () -> Date = Date.init,
@@ -137,6 +160,7 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
         self.workspace = workspace
         self.workspaceNotificationCenter = workspaceNotificationCenter ?? workspace.notificationCenter
         self.playlistNotificationCenter = playlistNotificationCenter
+        self.notificationCenter = notificationCenter
         self.userDefaults = userDefaults
         self.activePlaylistDefaultsKey = activePlaylistDefaultsKey
         self.preferredPlaylistID = Self.readPersistedPlaylistID(
@@ -160,6 +184,7 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
         queue.async {
             self.persistPreferredPlaylistID(id)
             self.setCurrentPlaylistID(id)
+            self.postSchedulerStateDidChange()
             guard self.isRunning else { return }
             self.logger.log("Active playlist explicitly set to \(id.uuidString, privacy: .public)")
             self.rebuildSchedules(reason: .manualRefresh)
@@ -174,6 +199,7 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
             }
             self.logger.log("Starting scheduler")
             self.setRunning(true)
+            self.postSchedulerStateDidChange()
             self.subscribeToWorkspaceNotifications()
             self.subscribeToPlaylistNotifications()
             self.rebuildSchedules(reason: .start)
@@ -189,6 +215,7 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
             self.logger.log("Pausing scheduler")
             self.setRunning(false)
             self.setCurrentPlaylistID(nil)
+            self.postSchedulerStateDidChange()
             self.cancelAllTimers(clearRemaining: true)
             self.unsubscribeFromWorkspaceNotifications()
             self.unsubscribeFromPlaylistNotifications()
@@ -314,6 +341,7 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
             }
             schedules.removeAll()
             setCurrentPlaylistID(nil)
+            postSchedulerStateDidChange()
             logger.log("No playable playlists available; scheduler is idle")
             return
         }
@@ -334,6 +362,7 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
         schedule.update(with: activeRecord)
         schedules[activePlaylistID] = schedule
         setCurrentPlaylistID(activePlaylistID)
+        postSchedulerStateDidChange()
         rescheduleTimer(for: schedule, reason: reason)
 
         if orderedPlayable.count > 1 {
@@ -419,6 +448,8 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
 
         if applied {
             setCurrentPlaylistID(schedule.id)
+            postSchedulerStateDidChange()
+            postRotationDidApply(playlistID: schedule.id)
             if let wallpaper = preview {
                 logger.log(
                     "Rotated playlist \(schedule.record.name, privacy: .public) to wallpaper \(wallpaper.displayName, privacy: .public) (trigger \(trigger.rawValue, privacy: .public))"
@@ -600,6 +631,25 @@ final class DefaultSchedulerCoordinator: SchedulerCoordinator, @unchecked Sendab
         } else {
             queue.sync(execute: perform)
         }
+    }
+
+    private func postSchedulerStateDidChange() {
+        notificationCenter.post(
+            name: .schedulerCoordinatorStateDidChange,
+            object: self,
+            userInfo: [
+                SchedulerNotificationKey.isRunning: isRunning,
+                SchedulerNotificationKey.activePlaylistID: activePlaylistID as Any
+            ]
+        )
+    }
+
+    private func postRotationDidApply(playlistID: UUID) {
+        notificationCenter.post(
+            name: .schedulerCoordinatorDidRotateWallpaper,
+            object: self,
+            userInfo: [SchedulerNotificationKey.playlistID: playlistID]
+        )
     }
 }
 

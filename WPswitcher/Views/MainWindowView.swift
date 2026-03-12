@@ -247,7 +247,7 @@ struct MainWindowView: View {
 
     private func openPreferences() {
         NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
 
     private func quitApplication() {
@@ -266,52 +266,56 @@ private struct LibraryDashboardView: View {
     let canPlayProvider: (PlaylistRecord) -> Bool
 
     var body: some View {
-        VStack(spacing: 0) {
-            WallpaperLibraryView()
-                .frame(minHeight: 250)
+        GeometryReader { proxy in
+            let playlistSectionHeight = max(124, min(174, proxy.size.height * 0.42))
 
-            Divider()
+            VStack(spacing: 0) {
+                WallpaperLibraryView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Playlists")
-                        .font(.headline)
-                    Spacer()
-                    Text("\(playlists.count) item\(playlists.count == 1 ? "" : "s")")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                Divider()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Playlists")
+                            .font(.headline)
+                        Spacer()
+                        Text("\(playlists.count) item\(playlists.count == 1 ? "" : "s")")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+
+                    if let playlistError {
+                        Text(playlistError)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                            .padding(.horizontal, 16)
+                    }
+
+                    if playlists.isEmpty {
+                        EmptyPlaylistPlaceholder()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 12)
+                    } else {
+                        CompactPlaylistGrid(
+                            playlists: playlists,
+                            selectedPlaylistID: selectedPlaylistID,
+                            onSelectPlaylist: onSelectPlaylist,
+                            onPlayNow: onPlayNow,
+                            onDelete: onDeletePlaylist,
+                            previewTextProvider: previewTextProvider,
+                            canPlayProvider: canPlayProvider
+                        )
+                    }
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-
-                if let playlistError {
-                    Text(playlistError)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                        .padding(.horizontal, 16)
-                }
-
-                if playlists.isEmpty {
-                    EmptyPlaylistPlaceholder()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 16)
-                } else {
-                    CompactPlaylistGrid(
-                        playlists: playlists,
-                        selectedPlaylistID: selectedPlaylistID,
-                        onSelectPlaylist: onSelectPlaylist,
-                        onPlayNow: onPlayNow,
-                        onDelete: onDeletePlaylist,
-                        previewTextProvider: previewTextProvider,
-                        canPlayProvider: canPlayProvider
-                    )
-                }
+                .frame(height: playlistSectionHeight, alignment: .top)
+                .background(Color(nsColor: .windowBackgroundColor))
             }
-            .frame(minHeight: 196, maxHeight: .infinity, alignment: .top)
             .background(Color(nsColor: .windowBackgroundColor))
         }
-        .background(Color(nsColor: .windowBackgroundColor))
     }
 }
 

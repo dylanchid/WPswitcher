@@ -17,21 +17,31 @@ struct WallpaperLibraryView: View {
     }
 
     var body: some View {
-        ZStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 6) {
-                    mainContentSection
-                    filmstripSection
+        GeometryReader { proxy in
+            let isCompact = proxy.size.width < 700
+
+            ZStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 8) {
+                        mainContentSection(isCompact: isCompact)
+                        filmstripSection
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 14)
+                    .padding(.bottom, 10)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .background(Color(nsColor: .windowBackgroundColor))
+                .onAppear(perform: initialize)
+                .onReceive(NotificationCenter.default.publisher(for: .schedulerCoordinatorStateDidChange)) { _ in
+                    updateRotationStatus()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .schedulerCoordinatorDidRotateWallpaper)) { _ in
+                    loadCurrentDesktop()
+                }
+
+                ErrorBanner(errorManager: services.errorManager)
             }
-            .background(Color(nsColor: .windowBackgroundColor))
-            .onAppear(perform: initialize)
-            
-            ErrorBanner(errorManager: services.errorManager)
         }
     }
 
@@ -61,24 +71,55 @@ struct WallpaperLibraryView: View {
         .labelStyle(.iconOnly)
     }
 
-    private var mainContentSection: some View {
-        HStack(alignment: .top, spacing: 16) {
-            previewContent
-                .frame(minHeight: 128, maxHeight: 173, alignment: .topLeading)
-                .frame(maxWidth: 430, alignment: .topLeading)
+    @ViewBuilder
+    private func mainContentSection(isCompact: Bool) -> some View {
+        Group {
+            if isCompact {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Spacer(minLength: 0)
+                        controlButtons
+                    }
 
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Spacer(minLength: 0)
-                    controlButtons
+                    previewCard
+                        .frame(height: 148)
+
+                    fileInfoSection
                 }
-                fileInfoSection
-            }
-            .frame(width: 250, alignment: .topLeading)
+            } else {
+                HStack(alignment: .top, spacing: 16) {
+                    previewCard
+                        .frame(minHeight: 128, maxHeight: 173, alignment: .topLeading)
+                        .frame(maxWidth: 430, alignment: .topLeading)
 
-            Spacer(minLength: 0)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Spacer(minLength: 0)
+                            controlButtons
+                        }
+                        fileInfoSection
+                    }
+                    .frame(width: 250, alignment: .topLeading)
+
+                    Spacer(minLength: 0)
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    private var previewCard: some View {
+        previewContent
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color(nsColor: .separatorColor).opacity(0.28), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private var previewContent: some View {
@@ -284,7 +325,6 @@ struct WallpaperLibraryView: View {
 
     private func advanceWallpaper() {
         services.schedulerCoordinator.advance()
-        loadCurrentDesktop()
     }
 
     private func selectCurrentDesktop() {
@@ -329,13 +369,12 @@ struct WallpaperLibraryView: View {
 
     private func toggleRotation() {
         services.schedulerCoordinator.toggleRotation()
-        withAnimation(.easeInOut(duration: 0.2)) {
-            updateRotationStatus()
-        }
     }
 
     private func updateRotationStatus() {
-        isRotationRunning = services.schedulerCoordinator.isRunning
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isRotationRunning = services.schedulerCoordinator.isRunning
+        }
     }
 
     private func delete(_ record: WallpaperRecord) {
