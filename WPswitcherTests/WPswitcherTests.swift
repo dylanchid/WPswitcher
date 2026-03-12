@@ -22,7 +22,9 @@ final class WPswitcherTests: XCTestCase {
         )
 
         viewModel.refreshLibrary()
-        try await Task.sleep(nanoseconds: 50_000_000)
+        await waitUntil {
+            viewModel.availableDisplays == displays
+        }
 
         XCTAssertEqual(viewModel.availableDisplays, displays)
     }
@@ -39,7 +41,11 @@ final class WPswitcherTests: XCTestCase {
         )
 
         viewModel.refreshLibrary()
-        try await Task.sleep(nanoseconds: 50_000_000)
+        await waitUntil {
+            viewModel.availableDisplays == [
+                DisplayDescriptor(id: "100", name: "Studio Display")
+            ]
+        }
         viewModel.multiDisplayPolicy = .perDisplay
         viewModel.displayAssignments = [
             .init(id: UUID(), displayID: "missing", lightWallpaperId: nil, darkWallpaperId: nil)
@@ -97,6 +103,26 @@ final class WPswitcherTests: XCTestCase {
 
         XCTAssertTrue(state.isRunning)
         XCTAssertEqual(state.activePlaylistID, playlistID)
+    }
+
+    private func waitUntil(
+        timeout: Duration = .seconds(1),
+        pollInterval: Duration = .milliseconds(10),
+        file: StaticString = #filePath,
+        line: UInt = #line,
+        condition: @escaping @MainActor () -> Bool
+    ) async {
+        let clock = ContinuousClock()
+        let deadline = clock.now + timeout
+
+        while !condition() {
+            if clock.now >= deadline {
+                XCTFail("Timed out waiting for async state update.", file: file, line: line)
+                return
+            }
+
+            try? await Task.sleep(for: pollInterval)
+        }
     }
 }
 
