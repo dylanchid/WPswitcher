@@ -13,6 +13,7 @@ struct WPswitcherApp: App {
         Settings {
             SettingsView()
                 .environmentObject(services)
+                .environmentObject(services.schedulerState)
         }
     }
 }

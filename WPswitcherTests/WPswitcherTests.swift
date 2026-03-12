@@ -49,6 +49,55 @@ final class WPswitcherTests: XCTestCase {
 
         XCTAssertEqual(viewModel.errorMessage, "Display assignment 'missing' no longer matches a connected display.")
     }
+
+    func testSchedulerViewStateTracksCoordinatorNotifications() {
+        let notificationCenter = NotificationCenter()
+        let scheduler = MockSchedulerCoordinator()
+        let state = SchedulerViewState(
+            schedulerCoordinator: scheduler,
+            notificationCenter: notificationCenter
+        )
+        let playlistID = UUID()
+
+        scheduler.isRunningValue = true
+        scheduler.activePlaylistIDValue = playlistID
+        notificationCenter.post(
+            name: .schedulerCoordinatorStateDidChange,
+            object: nil,
+            userInfo: [
+                SchedulerNotificationKey.isRunning: true,
+                SchedulerNotificationKey.activePlaylistID: playlistID
+            ]
+        )
+
+        XCTAssertTrue(state.isRunning)
+        XCTAssertEqual(state.activePlaylistID, playlistID)
+
+        notificationCenter.post(
+            name: .schedulerCoordinatorDidRotateWallpaper,
+            object: nil,
+            userInfo: [SchedulerNotificationKey.playlistID: playlistID]
+        )
+
+        XCTAssertEqual(state.lastRotatedPlaylistID, playlistID)
+        XCTAssertEqual(state.rotationEventCount, 1)
+    }
+
+    func testSchedulerViewStateRefreshesFromCoordinatorSnapshot() {
+        let scheduler = MockSchedulerCoordinator()
+        let state = SchedulerViewState(
+            schedulerCoordinator: scheduler,
+            notificationCenter: NotificationCenter()
+        )
+        let playlistID = UUID()
+
+        scheduler.isRunningValue = true
+        scheduler.activePlaylistIDValue = playlistID
+        state.refresh(from: scheduler)
+
+        XCTAssertTrue(state.isRunning)
+        XCTAssertEqual(state.activePlaylistID, playlistID)
+    }
 }
 
 private final class MockEditorPlaylistStore: PlaylistStore {
@@ -93,4 +142,30 @@ private final class MockEditorWallpaperService: WallpaperService {
     func resolveAccess(for wallpaper: WallpaperRecord) -> WallpaperResolution { .missing }
 
     func availableDisplays() -> [DisplayDescriptor] { displays }
+}
+
+private final class MockSchedulerCoordinator: SchedulerCoordinator {
+    var isRunningValue = false
+    var activePlaylistIDValue: UUID?
+
+    var isRunning: Bool { isRunningValue }
+    var activePlaylistID: UUID? { activePlaylistIDValue }
+
+    func setActivePlaylist(id: UUID) {
+        activePlaylistIDValue = id
+    }
+
+    func start() {
+        isRunningValue = true
+    }
+
+    func pause() {
+        isRunningValue = false
+    }
+
+    func toggleRotation() {
+        isRunningValue.toggle()
+    }
+
+    func advance() {}
 }

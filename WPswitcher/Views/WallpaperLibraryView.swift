@@ -3,13 +3,13 @@ import SwiftUI
 
 struct WallpaperLibraryView: View {
     @EnvironmentObject private var services: ServiceRegistry
+    @EnvironmentObject private var schedulerState: SchedulerViewState
     @State private var wallpapers: [WallpaperRecord] = []
     @State private var isImporting = false
     @State private var previewSelection: PreviewSelection = .currentDesktop
     @State private var currentWallpaperURL: URL?
     @State private var currentWallpaperImage: NSImage?
     @State private var isLoadingCurrentWallpaper = false
-    @State private var isRotationRunning = false
 
     private var selectedWallpaper: WallpaperRecord? {
         guard case let .wallpaper(id) = previewSelection else { return nil }
@@ -33,10 +33,7 @@ struct WallpaperLibraryView: View {
                 }
                 .background(Color(nsColor: .windowBackgroundColor))
                 .onAppear(perform: initialize)
-                .onReceive(NotificationCenter.default.publisher(for: .schedulerCoordinatorStateDidChange)) { _ in
-                    updateRotationStatus()
-                }
-                .onReceive(NotificationCenter.default.publisher(for: .schedulerCoordinatorDidRotateWallpaper)) { _ in
+                .onChange(of: schedulerState.rotationEventCount) { _ in
                     loadCurrentDesktop()
                 }
 
@@ -54,11 +51,11 @@ struct WallpaperLibraryView: View {
 
             Button(action: toggleRotation) {
                 Label(
-                    isRotationRunning ? "Pause Rotation" : "Resume Rotation",
-                    systemImage: isRotationRunning ? "pause.circle" : "play.circle"
+                    schedulerState.isRunning ? "Pause Rotation" : "Resume Rotation",
+                    systemImage: schedulerState.isRunning ? "pause.circle" : "play.circle"
                 )
             }
-            .help(isRotationRunning ? "Pause automatic rotation." : "Resume automatic rotation.")
+            .help(schedulerState.isRunning ? "Pause automatic rotation." : "Resume automatic rotation.")
 
             Button(action: importWallpapers) {
                 Label("Import Wallpapers", systemImage: "square.and.arrow.down")
@@ -265,7 +262,7 @@ struct WallpaperLibraryView: View {
     private func initialize() {
         loadLibrary()
         loadCurrentDesktop()
-        updateRotationStatus()
+        schedulerState.refresh(from: services.schedulerCoordinator)
     }
 
     private func loadLibrary() {
@@ -369,12 +366,6 @@ struct WallpaperLibraryView: View {
 
     private func toggleRotation() {
         services.schedulerCoordinator.toggleRotation()
-    }
-
-    private func updateRotationStatus() {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            isRotationRunning = services.schedulerCoordinator.isRunning
-        }
     }
 
     private func delete(_ record: WallpaperRecord) {

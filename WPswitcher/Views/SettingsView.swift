@@ -3,13 +3,13 @@ import ServiceManagement
 
 struct SettingsView: View {
     @EnvironmentObject private var services: ServiceRegistry
+    @EnvironmentObject private var schedulerState: SchedulerViewState
     @State private var selection: SettingsSection = .general
     @State private var launchAtLogin = false
     @State private var playlists: [PlaylistRecord] = []
     @State private var activePlaylistSelection: UUID?
     @State private var isLoadingPlaylists = false
     @State private var playlistLoadError: String?
-    @State private var isRotationEnabled = false
 
     var body: some View {
         TabView(selection: $selection) {
@@ -26,7 +26,7 @@ struct SettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: .playlistStoreDidChange)) { _ in
             refreshPlaylists()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .schedulerCoordinatorStateDidChange)) { _ in
+        .onChange(of: schedulerState.activePlaylistID) { _ in
             syncSchedulerState()
         }
     }
@@ -93,18 +93,18 @@ struct SettingsView: View {
     }
 
     private func syncSchedulerState() {
-        isRotationEnabled = services.schedulerCoordinator.isRunning
-        if let selected = services.schedulerCoordinator.activePlaylistID,
+        schedulerState.refresh(from: services.schedulerCoordinator)
+        if let selected = schedulerState.activePlaylistID,
            playlists.contains(where: { $0.id == selected }) {
             activePlaylistSelection = selected
         }
     }
 
     private var generalSettings: some View {
-        let status = isRotationEnabled ? "Yes" : "No"
+        let status = schedulerState.isRunning ? "Yes" : "No"
         return Form {
             Toggle("Enable Rotation", isOn: Binding(
-                get: { isRotationEnabled },
+                get: { schedulerState.isRunning },
                 set: { enabled in
                     if enabled {
                         services.schedulerCoordinator.start()
