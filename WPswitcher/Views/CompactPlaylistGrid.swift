@@ -1,23 +1,12 @@
-import AppKit
 import SwiftUI
 
-private struct CompactPlaylistCardConfiguration {
-    let gradient: LinearGradient
-    let overlayColor: Color
-}
-
 private extension PlaylistRecord {
-    var gradient: LinearGradient {
-        let colors: [Color] = [
-            .init(nsColor: .systemPurple),
-            .init(nsColor: .systemIndigo),
-            .init(nsColor: .systemTeal)
-        ]
-        return LinearGradient(
-            gradient: Gradient(colors: colors),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+    var readyEntryCount: Int {
+        entries.reduce(into: 0) { count, entry in
+            if entry.lightWallpaper != nil || entry.darkWallpaper != nil {
+                count += 1
+            }
+        }
     }
 }
 
@@ -30,14 +19,13 @@ struct CompactPlaylistGrid: View {
     let previewTextProvider: (PlaylistRecord) -> String
     let canPlayProvider: (PlaylistRecord) -> Bool
 
-    private let columnSpacing: CGFloat = 16
-    private let rowSpacing: CGFloat = 12
-    private let cardMinimumWidth: CGFloat = 170
+    private let columnSpacing: CGFloat = 18
+    private let rowSpacing: CGFloat = 18
+    private let cardMinimumWidth: CGFloat = 240
 
     var body: some View {
         GeometryReader { proxy in
-            let compactHeight = proxy.size.height < 150
-            let columns = max(1, Int(proxy.size.width / (cardMinimumWidth + columnSpacing)))
+            let columns = max(1, Int((proxy.size.width + columnSpacing) / (cardMinimumWidth + columnSpacing)))
             ScrollView {
                 LazyVGrid(columns: Array(repeating: .init(.flexible(), spacing: columnSpacing), count: columns), spacing: rowSpacing) {
                     ForEach(playlists) { playlist in
@@ -48,15 +36,11 @@ struct CompactPlaylistGrid: View {
                             onPlayNow: { onPlayNow(playlist) },
                             onDelete: { onDelete(playlist.id) },
                             previewText: previewTextProvider(playlist),
-                            canPlay: canPlayProvider(playlist),
-                            compact: compactHeight
+                            canPlay: canPlayProvider(playlist)
                         )
-                        .frame(minHeight: compactHeight ? 110 : 148)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 10)
+                .padding(1)
             }
         }
     }
@@ -70,56 +54,75 @@ private struct CompactPlaylistCard: View {
     let onDelete: () -> Void
     let previewText: String
     let canPlay: Bool
-    let compact: Bool
-
-    private var titleFont: Font {
-        compact ? .subheadline.weight(.semibold) : .headline
-    }
-
-    private var verticalSpacing: CGFloat {
-        compact ? 8 : 10
-    }
-
-    private var actionSpacing: CGFloat {
-        compact ? 6 : 8
-    }
-
-    private var contentPadding: CGFloat {
-        compact ? 12 : 14
-    }
 
     var body: some View {
         Button {
             onSelect()
         } label: {
-            VStack(alignment: .leading, spacing: verticalSpacing) {
-                HStack {
-                    Text(playlist.name)
-                        .font(titleFont)
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                    Spacer()
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(playlist.name)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+
+                        Text(previewText)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(3)
+                    }
+
+                    Spacer(minLength: 0)
+
                     Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .padding(.top, 2)
                 }
-                Text(previewText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                Spacer()
-                actionRow
+
+                HStack(spacing: 8) {
+                    PlaylistMetricPill(label: "Entries", value: "\(playlist.entries.count)")
+                    PlaylistMetricPill(label: "Ready", value: "\(playlist.readyEntryCount)")
+                    PlaylistMetricPill(label: "Every", value: "\(playlist.intervalMinutes)m")
+                }
+
+                HStack(spacing: 10) {
+                    actionButton(
+                        title: "Open",
+                        systemImage: "slider.horizontal.3",
+                        prominence: .secondary,
+                        action: onSelect
+                    )
+
+                    actionButton(
+                        title: "Play Now",
+                        systemImage: "play.fill",
+                        prominence: .primary,
+                        action: onPlayNow
+                    )
+                    .disabled(!canPlay)
+
+                    actionButton(
+                        title: "Delete",
+                        systemImage: "trash",
+                        prominence: .destructive,
+                        action: onDelete
+                    )
+                }
             }
-            .padding(contentPadding)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(18)
+            .frame(maxWidth: .infinity, minHeight: 176, alignment: .topLeading)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(playlist.gradient)
-                    .opacity(isSelected ? 1 : 0.8)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color(nsColor: isSelected ? .controlAccentColor.withSystemEffect(.pressed) : .controlBackgroundColor))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color(nsColor: .separatorColor).opacity(isSelected ? 0.9 : 0.5), lineWidth: isSelected ? 2 : 1)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(
+                        isSelected ? Color.accentColor.opacity(0.8) : Color(nsColor: .separatorColor).opacity(0.35),
+                        lineWidth: isSelected ? 2 : 1
+                    )
             )
         }
         .buttonStyle(.plain)
@@ -142,47 +145,67 @@ private struct CompactPlaylistCard: View {
         }
     }
 
-    private var actionRow: some View {
-        HStack(spacing: actionSpacing) {
-            playButton
-            deleteButton
+    private func actionButton(
+        title: String,
+        systemImage: String,
+        prominence: ActionProminence,
+        action: @escaping () -> Void
+    ) -> some View {
+        Group {
+            switch prominence {
+            case .primary:
+                Button(action: action) {
+                    Label(title, systemImage: systemImage)
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+
+            case .secondary:
+                Button(action: action) {
+                    Label(title, systemImage: systemImage)
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+            case .destructive:
+                Button(action: action) {
+                    Label(title, systemImage: systemImage)
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .controlSize(.small)
+            }
         }
     }
+}
 
-    private var playButton: some View {
-        Button {
-            onPlayNow()
-        } label: {
-            Group {
-                if compact {
-                    Image(systemName: "play.fill")
-                } else {
-                    Label("Play", systemImage: "play.fill")
-                        .labelStyle(.titleAndIcon)
-                }
-            }
-            .font(.caption)
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
-        .disabled(!canPlay)
-    }
+private enum ActionProminence {
+    case primary
+    case secondary
+    case destructive
+}
 
-    private var deleteButton: some View {
-        Button(role: .destructive) {
-            onDelete()
-        } label: {
-            Group {
-                if compact {
-                    Image(systemName: "trash")
-                } else {
-                    Label("Delete", systemImage: "trash")
-                        .labelStyle(.titleAndIcon)
-                }
-            }
-            .font(.caption)
+private struct PlaylistMetricPill: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.primary)
         }
-        .buttonStyle(.borderless)
-        .controlSize(.small)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(nsColor: .textBackgroundColor))
+        )
     }
 }

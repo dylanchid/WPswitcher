@@ -6,8 +6,7 @@ struct MainWindowView: View {
     @State private var selection: MainDestination? = .library
     @State private var playlists: [PlaylistRecord] = []
     @State private var playlistError: String?
-    /// Sidebar closed by default; toggled via toolbar button.
-    @State private var sidebarVisibility: NavigationSplitViewVisibility = .detailOnly
+    @State private var sidebarVisibility: NavigationSplitViewVisibility = .all
 
     var body: some View {
         NavigationSplitView(columnVisibility: $sidebarVisibility) {
@@ -18,7 +17,7 @@ struct MainWindowView: View {
                     ToolbarItem(placement: .navigation) {
                         Button {
                             withAnimation(.easeInOut(duration: 0.2)) {
-                                sidebarVisibility = sidebarVisibility == .detailOnly ? .doubleColumn : .detailOnly
+                                sidebarVisibility = sidebarVisibility == .detailOnly ? .all : .detailOnly
                             }
                         } label: {
                             Image(systemName: "sidebar.left")
@@ -27,9 +26,9 @@ struct MainWindowView: View {
                     }
                 }
         }
-        .frame(minWidth: 405, minHeight: 270)
+        .navigationSplitViewStyle(.balanced)
+        .frame(minWidth: 920, minHeight: 620)
         .background(Color(nsColor: .windowBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .onAppear(perform: refreshPlaylists)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             refreshPlaylists()
@@ -37,18 +36,28 @@ struct MainWindowView: View {
     }
 
     private var sidebar: some View {
-        List(selection: $selection) {
-            Section("Features") {
-                NavigationLink(value: MainDestination.library) {
-                    Label("Wallpaper Library", systemImage: "photo.on.rectangle")
-                }
-            }
+        VStack(spacing: 0) {
+            sidebarHeader
 
-            Section("Playlists") {
-                Button(action: createPlaylist) {
-                    Label("New Playlist", systemImage: "plus")
+            List(selection: $selection) {
+                Section("Workspace") {
+                    NavigationLink(value: MainDestination.library) {
+                        Label("Library", systemImage: "photo.on.rectangle.angled")
+                    }
                 }
-                .buttonStyle(.plain)
+
+                Section {
+                    Button(action: createPlaylist) {
+                        Label("New Playlist", systemImage: "plus.circle.fill")
+                    }
+                    .buttonStyle(.plain)
+                } header: {
+                    HStack {
+                        Text("Playlists")
+                        Spacer()
+                        Text("\(playlists.count)")
+                    }
+                }
 
                 if playlists.isEmpty {
                     Label("No playlists yet", systemImage: "music.note.list")
@@ -56,7 +65,13 @@ struct MainWindowView: View {
                 } else {
                     ForEach(playlists) { playlist in
                         NavigationLink(value: MainDestination.playlist(playlist.id)) {
-                            Label(playlist.name, systemImage: "music.note.list")
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(playlist.name)
+                                    .lineLimit(1)
+                                Text("\(playlist.entries.count) entries")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                         .contextMenu {
                             Button(role: .destructive) {
@@ -67,29 +82,45 @@ struct MainWindowView: View {
                         }
                     }
                 }
-            }
+                Section("App") {
+                    Button(action: openPreferences) {
+                        Label("Preferences…", systemImage: "gearshape")
+                    }
+                    .buttonStyle(.plain)
 
-            Section {
-                Button(action: openPreferences) {
-                    Label("Preferences…", systemImage: "gearshape")
+                    Button(action: quitApplication) {
+                        Label("Quit WPswitcher", systemImage: "power")
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
 
-                Button(action: quitApplication) {
-                    Label("Quit WPswitcher", systemImage: "power")
-                }
-                .buttonStyle(.plain)
-            }
-
-            if let playlistError {
-                Section {
-                    Text("Playlist error: \(playlistError)")
-                        .font(.caption)
-                        .foregroundColor(.red)
+                if let playlistError {
+                    Section {
+                        Text("Playlist error: \(playlistError)")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
                 }
             }
+            .listStyle(.sidebar)
         }
-        .listStyle(.sidebar)
+        .frame(minWidth: 250, idealWidth: 270, maxWidth: 300, maxHeight: .infinity, alignment: .top)
+        .background(Color(nsColor: .underPageBackgroundColor))
+    }
+
+    private var sidebarHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("WPswitcher")
+                .font(.title3.weight(.semibold))
+            Text("Manage your wallpaper library and rotation playlists.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.top, 18)
+        .padding(.bottom, 14)
     }
 
     @ViewBuilder
@@ -103,6 +134,7 @@ struct MainWindowView: View {
                 onSelectPlaylist: { id in
                     selection = .playlist(id)
                 },
+                onCreatePlaylist: createPlaylist,
                 onPlayNow: applyPlaylistNow,
                 onDeletePlaylist: deletePlaylist,
                 previewTextProvider: previewText,
@@ -260,6 +292,7 @@ private struct LibraryDashboardView: View {
     let selectedPlaylistID: UUID?
     let playlistError: String?
     let onSelectPlaylist: (UUID) -> Void
+    let onCreatePlaylist: () -> Void
     let onPlayNow: (PlaylistRecord) -> Void
     let onDeletePlaylist: (UUID) -> Void
     let previewTextProvider: (PlaylistRecord) -> String
@@ -267,55 +300,115 @@ private struct LibraryDashboardView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let playlistSectionHeight = max(124, min(174, proxy.size.height * 0.42))
+            let showsSidePanel = proxy.size.width >= 1180
 
-            VStack(spacing: 0) {
-                WallpaperLibraryView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                Divider()
-
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Playlists")
-                            .font(.headline)
-                        Spacer()
-                        Text("\(playlists.count) item\(playlists.count == 1 ? "" : "s")")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 10)
-
-                    if let playlistError {
-                        Text(playlistError)
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                            .padding(.horizontal, 16)
-                    }
-
-                    if playlists.isEmpty {
-                        EmptyPlaylistPlaceholder()
+            Group {
+                if showsSidePanel {
+                    HStack(spacing: 24) {
+                        librarySurface
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 12)
-                    } else {
-                        CompactPlaylistGrid(
-                            playlists: playlists,
-                            selectedPlaylistID: selectedPlaylistID,
-                            onSelectPlaylist: onSelectPlaylist,
-                            onPlayNow: onPlayNow,
-                            onDelete: onDeletePlaylist,
-                            previewTextProvider: previewTextProvider,
-                            canPlayProvider: canPlayProvider
-                        )
+
+                        playlistsPanel
+                            .frame(width: 360)
+                            .frame(maxHeight: .infinity)
+                    }
+                } else {
+                    VStack(spacing: 20) {
+                        librarySurface
+                            .frame(maxWidth: .infinity, minHeight: 400, maxHeight: .infinity)
+
+                        playlistsPanel
+                            .frame(maxWidth: .infinity, minHeight: 260)
                     }
                 }
-                .frame(height: playlistSectionHeight, alignment: .top)
-                .background(Color(nsColor: .windowBackgroundColor))
             }
+            .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Color(nsColor: .windowBackgroundColor))
         }
+    }
+
+    private var librarySurface: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("Wallpaper Library")
+                .font(.title2.weight(.semibold))
+            Text("Preview the current desktop, import new wallpapers, and apply changes immediately.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            WallpaperLibraryView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(Color(nsColor: .underPageBackgroundColor))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(Color(nsColor: .separatorColor).opacity(0.2), lineWidth: 1)
+                )
+        }
+    }
+
+    private var playlistsPanel: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Playlists")
+                        .font(.title3.weight(.semibold))
+                    Text("Build rotation sets for focused moods, displays, and schedules.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 12)
+
+                Button {
+                    onCreatePlaylist()
+                } label: {
+                    Label("New Playlist", systemImage: "plus")
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
+            }
+
+            HStack {
+                Label("\(playlists.count) total", systemImage: "music.note.list")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+
+            if let playlistError {
+                Text(playlistError)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
+
+            if playlists.isEmpty {
+                EmptyPlaylistPlaceholder()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                CompactPlaylistGrid(
+                    playlists: playlists,
+                    selectedPlaylistID: selectedPlaylistID,
+                    onSelectPlaylist: onSelectPlaylist,
+                    onPlayNow: onPlayNow,
+                    onDelete: onDeletePlaylist,
+                    previewTextProvider: previewTextProvider,
+                    canPlayProvider: canPlayProvider
+                )
+            }
+        }
+        .padding(22)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color(nsColor: .underPageBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.2), lineWidth: 1)
+        )
     }
 }
 
@@ -327,8 +420,8 @@ private struct EmptyPlaylistPlaceholder: View {
                 .foregroundStyle(.secondary)
             Text("No Playlists Yet")
                 .font(.headline)
-            Text("Create a playlist from the sidebar to start scheduling rotations.")
-                .font(.footnote)
+            Text("Create a playlist to start scheduling rotations and applying curated wallpaper sets.")
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }

@@ -36,7 +36,9 @@ struct PlaylistEditorView: View {
         GeometryReader { proxy in
             let compact = isCompactLayout(proxy.size)
             ScrollView {
-                VStack(alignment: .leading, spacing: compact ? 10 : 12) {
+                VStack(alignment: .leading, spacing: compact ? 14 : 20) {
+                    editorHeader
+
                     if let error = viewModel.errorMessage {
                         Text(error)
                             .font(.footnote)
@@ -52,14 +54,18 @@ struct PlaylistEditorView: View {
                         regularContent
                     }
                 }
-                .padding(compact ? 12 : 16)
+                .padding(compact ? 16 : 24)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .navigationTitle(title)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                HStack(spacing: 8) {
+                HStack(spacing: 12) {
+                    Text(viewModel.hasUnsavedChanges ? "Unsaved Changes" : "All Changes Saved")
+                        .font(.subheadline)
+                        .foregroundStyle(viewModel.hasUnsavedChanges ? .secondary : .tertiary)
+
                     if viewModel.isSaving {
                         ProgressView()
                             .controlSize(.small)
@@ -85,10 +91,33 @@ struct PlaylistEditorView: View {
     }
 
     private var regularContent: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            detailsCard(compact: false)
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(alignment: .top, spacing: 20) {
+                detailsCard(compact: false)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                displaysCard(compact: false)
+                    .frame(width: 340, alignment: .topLeading)
+            }
+
             entriesCard(compact: false)
-            displaysCard(compact: false)
+        }
+    }
+
+    private var editorHeader: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.largeTitle.weight(.semibold))
+            Text("Define the playlist schedule, choose wallpapers for each entry, and configure display-specific overrides where needed.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 10) {
+                EditorStatChip(label: "Entries", value: "\(viewModel.entries.count)")
+                EditorStatChip(label: "Interval", value: "\(viewModel.intervalMinutes) min")
+                EditorStatChip(label: "Mode", value: label(for: viewModel.playbackMode))
+                EditorStatChip(label: "Displays", value: label(for: viewModel.multiDisplayPolicy))
+            }
         }
     }
 
@@ -302,7 +331,7 @@ struct PlaylistEditorView: View {
     }
 
     private func isCompactLayout(_ size: CGSize) -> Bool {
-        size.width <= 520 || size.height <= 420
+        size.width <= 760 || size.height <= 520
     }
 }
 
@@ -339,7 +368,8 @@ private struct PlaylistEntryRow: View {
                         Image(systemName: "trash")
                     }
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
 
             WallpaperPicker(
@@ -402,7 +432,8 @@ private struct DisplayAssignmentRow: View {
                         Image(systemName: "trash")
                     }
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
 
             if displays.isEmpty {
@@ -477,6 +508,16 @@ private struct WallpaperPicker: View {
                     .truncationMode(.tail)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color(nsColor: .separatorColor).opacity(0.3), lineWidth: 1)
+            )
         }
         .menuStyle(.borderlessButton)
     }
@@ -587,6 +628,27 @@ private struct CompactStepperCard: View {
         .overlay(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(Color(nsColor: .separatorColor).opacity(0.35), lineWidth: 1)
+        )
+    }
+}
+
+private struct EditorStatChip: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor))
         )
     }
 }

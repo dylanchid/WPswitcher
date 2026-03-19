@@ -18,26 +18,65 @@ struct WallpaperLibraryView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let isCompact = proxy.size.width < 700
+            let isCompact = proxy.size.width < 760
 
             ZStack {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        headerSection
                         mainContentSection(isCompact: isCompact)
                         filmstripSection
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 14)
-                    .padding(.bottom, 10)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
+                    .padding(.bottom, 18)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
-                .background(Color(nsColor: .windowBackgroundColor))
+                .background(Color.clear)
                 .onAppear(perform: initialize)
                 .onChange(of: schedulerState.rotationEventCount) { _ in
                     loadCurrentDesktop()
                 }
 
                 ErrorBanner(errorManager: services.errorManager)
+            }
+        }
+    }
+
+    private var headerSection: some View {
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(selectedWallpaper?.displayName ?? "Current Desktop")
+                    .font(.title3.weight(.semibold))
+                Text(selectionSummary)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 10) {
+                actionButton(
+                    title: "Import",
+                    systemImage: "square.and.arrow.down",
+                    style: .prominent,
+                    action: importWallpapers
+                )
+                .disabled(isImporting)
+
+                actionButton(
+                    title: schedulerState.isRunning ? "Pause Rotation" : "Resume Rotation",
+                    systemImage: schedulerState.isRunning ? "pause.fill" : "play.fill",
+                    style: .standard,
+                    action: toggleRotation
+                )
+
+                actionButton(
+                    title: "Next Wallpaper",
+                    systemImage: "arrow.right.circle",
+                    style: .standard,
+                    action: advanceWallpaper
+                )
             }
         }
     }
@@ -64,8 +103,6 @@ struct WallpaperLibraryView: View {
             .disabled(isImporting)
         }
         .controlSize(.small)
-        .buttonStyle(.borderless)
-        .labelStyle(.iconOnly)
     }
 
     @ViewBuilder
@@ -73,30 +110,21 @@ struct WallpaperLibraryView: View {
         Group {
             if isCompact {
                 VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Spacer(minLength: 0)
-                        controlButtons
-                    }
-
                     previewCard
-                        .frame(height: 148)
+                        .frame(height: 260)
 
                     fileInfoSection
                 }
             } else {
                 HStack(alignment: .top, spacing: 16) {
                     previewCard
-                        .frame(minHeight: 128, maxHeight: 173, alignment: .topLeading)
-                        .frame(maxWidth: 430, alignment: .topLeading)
+                        .frame(minHeight: 320, maxHeight: 420, alignment: .topLeading)
+                        .frame(minWidth: 420, maxWidth: .infinity, alignment: .topLeading)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Spacer(minLength: 0)
-                            controlButtons
-                        }
                         fileInfoSection
                     }
-                    .frame(width: 250, alignment: .topLeading)
+                    .frame(width: 280, alignment: .topLeading)
 
                     Spacer(minLength: 0)
                 }
@@ -137,7 +165,10 @@ struct WallpaperLibraryView: View {
     }
 
     private var fileInfoSection: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("File Details")
+                .font(.headline)
+
             if let info = selectedFileInfo {
                 FileInfoRow(label: "File", value: info.name, emphasis: .high)
                 if let createdAt = info.createdAt {
@@ -247,7 +278,7 @@ struct WallpaperLibraryView: View {
                 }
                 .padding(.vertical, 2)
             }
-            .frame(height: 88)
+            .frame(height: 108)
 
             if wallpapers.isEmpty {
                 Text("Import wallpapers to start building your library.")
@@ -428,6 +459,45 @@ struct WallpaperLibraryView: View {
     private func recordMatches(_ record: WallpaperRecord, currentURL: URL) -> Bool {
         record.url.standardizedFileURL.path == currentURL.standardizedFileURL.path
     }
+
+    private var selectionSummary: String {
+        switch previewSelection {
+        case .currentDesktop:
+            return "Previewing the wallpaper currently applied to your desktop."
+        case .wallpaper:
+            return "Review metadata, verify the asset, and apply it instantly."
+        }
+    }
+
+    private func actionButton(
+        title: String,
+        systemImage: String,
+        style: HeaderActionStyle,
+        action: @escaping () -> Void
+    ) -> some View {
+        Group {
+            switch style {
+            case .prominent:
+                Button(action: action) {
+                    Label(title, systemImage: systemImage)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
+
+            case .standard:
+                Button(action: action) {
+                    Label(title, systemImage: systemImage)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+            }
+        }
+    }
+}
+
+private enum HeaderActionStyle {
+    case standard
+    case prominent
 }
 
 private enum PreviewSelection: Hashable {
@@ -459,7 +529,7 @@ private struct FileInfoRow: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
             Text(value)
-                .font(emphasis == .high ? .title3.weight(.semibold) : .callout)
+                .font(emphasis == .high ? .title3.weight(.semibold) : .body)
                 .lineLimit(emphasis == .high ? 2 : 3)
                 .truncationMode(.middle)
                 .fixedSize(horizontal: false, vertical: true)
@@ -597,7 +667,7 @@ private struct LibraryFilmstripItem<Thumbnail: View>: View {
                         .fill(Color(nsColor: .controlBackgroundColor))
                         .overlay(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+                                .stroke(isSelected ? Color.accentColor : Color(nsColor: .separatorColor).opacity(0.18), lineWidth: isSelected ? 2 : 1)
                         )
                     thumbnail()
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))

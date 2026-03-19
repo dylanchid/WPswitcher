@@ -9,8 +9,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private let mainWindowFrameKey = "MainWindowFrame"
     private let mainWindowFrameScaleVersionKey = "MainWindowFrameScaleVersion"
     private let mainWindowFrameScaleVersion = 1
-    private let defaultMainWindowSize = NSSize(width: 480, height: 300)
-    private let minimumMainWindowSize = NSSize(width: 405, height: 270)
+    private let defaultMainWindowSize = NSSize(width: 1160, height: 760)
+    private let minimumMainWindowSize = NSSize(width: 920, height: 620)
 
     func configure(with services: ServiceRegistry) {
         self.services = services
@@ -55,20 +55,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             window.setContentSize(defaultMainWindowSize)
         }
         window.setFrameAutosaveName("MainWindow")
-        // Keep compact appearance while allowing toolbar-hosted controls.
-        window.styleMask = [.titled, .fullSizeContentView]
-        window.titleVisibility = .hidden
-        window.titlebarAppearsTransparent = true
+        window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+        window.titleVisibility = .visible
+        window.titlebarAppearsTransparent = false
         if #available(macOS 11, *) {
-            window.toolbarStyle = .unifiedCompact
+            window.toolbarStyle = .unified
         }
-        window.standardWindowButton(.closeButton)?.isHidden = true
-        window.standardWindowButton(.miniaturizeButton)?.isHidden = true
-        window.standardWindowButton(.zoomButton)?.isHidden = true
-        window.isOpaque = false
-        window.backgroundColor = .clear
+        window.minSize = minimumMainWindowSize
+        window.isOpaque = true
+        window.backgroundColor = .windowBackgroundColor
         window.hasShadow = true
-        window.isMovableByWindowBackground = true
+        window.isMovableByWindowBackground = false
         window.isReleasedWhenClosed = false
         window.delegate = self
 
@@ -161,12 +158,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         var frame = NSRectFromString(frameString)
         guard frame.width > 0, frame.height > 0 else { return }
 
-        let shouldScale = frame.width > defaultMainWindowSize.width || frame.height > defaultMainWindowSize.height
+        let shouldScale = frame.width < minimumMainWindowSize.width || frame.height < minimumMainWindowSize.height
         guard shouldScale else { return }
 
         let scaledSize = NSSize(
-            width: max(minimumMainWindowSize.width, frame.width * 0.75),
-            height: max(minimumMainWindowSize.height, frame.height * 0.75)
+            width: max(minimumMainWindowSize.width, frame.width),
+            height: max(minimumMainWindowSize.height, frame.height)
         )
 
         let widthDelta = frame.width - scaledSize.width
