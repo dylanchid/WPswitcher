@@ -26,6 +26,18 @@ struct WPswitcherApp: App {
                     appDelegate.showMainWindowFromCommand()
                 }
                 .keyboardShortcut("0")
+
+                Divider()
+
+                Button("Show Quick Access") {
+                    appDelegate.showCompactWindowFromCommand()
+                }
+                .keyboardShortcut("8")
+
+                Button("Hide Quick Access") {
+                    appDelegate.hideCompactWindowFromCommand()
+                }
+                .keyboardShortcut("7")
             }
         }
     }

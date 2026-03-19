@@ -2,6 +2,11 @@ import AppKit
 import SwiftUI
 
 struct WallpaperLibraryView: View {
+    enum LayoutMode {
+        case fullDashboard
+        case compactDesktop
+    }
+
     @EnvironmentObject private var services: ServiceRegistry
     @EnvironmentObject private var schedulerState: SchedulerViewState
     @State private var wallpapers: [WallpaperRecord] = []
@@ -10,6 +15,11 @@ struct WallpaperLibraryView: View {
     @State private var currentWallpaperURL: URL?
     @State private var currentWallpaperImage: NSImage?
     @State private var isLoadingCurrentWallpaper = false
+    private let layoutMode: LayoutMode
+
+    init(layoutMode: LayoutMode = .fullDashboard) {
+        self.layoutMode = layoutMode
+    }
 
     private var selectedWallpaper: WallpaperRecord? {
         guard case let .wallpaper(id) = previewSelection else { return nil }
@@ -17,29 +27,37 @@ struct WallpaperLibraryView: View {
     }
 
     var body: some View {
-        GeometryReader { proxy in
-            let isCompact = proxy.size.width < 760
+        ZStack {
+            GeometryReader { proxy in
+                let isCompactWidth = proxy.size.width < 760
 
-            ZStack {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        headerSection
-                        mainContentSection(isCompact: isCompact)
-                        filmstripSection
+                Group {
+                    switch layoutMode {
+                    case .fullDashboard:
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 20) {
+                                headerSection
+                                mainContentSection(isCompact: isCompactWidth)
+                                filmstripSection
+                            }
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 4)
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                        }
+                    case .compactDesktop:
+                        compactDesktopSection
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, 18)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
-                .background(Color.clear)
-                .onAppear(perform: initialize)
-                .onChange(of: schedulerState.rotationEventCount) { _ in
-                    loadCurrentDesktop()
-                }
-
-                ErrorBanner(errorManager: services.errorManager)
             }
+            .padding(layoutMode == .compactDesktop ? 14 : 18)
+            .background(Color.clear)
+            .onAppear(perform: initialize)
+            .onChange(of: schedulerState.rotationEventCount) { _ in
+                loadCurrentDesktop()
+            }
+
+            ErrorBanner(errorManager: services.errorManager)
         }
     }
 
@@ -77,6 +95,61 @@ struct WallpaperLibraryView: View {
                     style: .standard,
                     action: advanceWallpaper
                 )
+            }
+        }
+    }
+
+    private var compactDesktopSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Current Desktop")
+                    .font(.title3.weight(.semibold))
+                Text(selectionSummary)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            previewCard
+                .frame(height: 260)
+
+            compactActions
+
+            filmstripSection
+        }
+    }
+
+    private var compactActions: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                actionButton(
+                    title: "Import",
+                    systemImage: "square.and.arrow.down",
+                    style: .prominent,
+                    action: importWallpapers
+                )
+                .disabled(isImporting)
+
+                actionButton(
+                    title: schedulerState.isRunning ? "Pause" : "Resume",
+                    systemImage: schedulerState.isRunning ? "pause.fill" : "play.fill",
+                    style: .standard,
+                    action: toggleRotation
+                )
+
+                actionButton(
+                    title: "Next",
+                    systemImage: "arrow.right.circle",
+                    style: .standard,
+                    action: advanceWallpaper
+                )
+            }
+
+            if let info = selectedFileInfo {
+                Text(info.name)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
             }
         }
     }
@@ -138,11 +211,11 @@ struct WallpaperLibraryView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .fill(Color(nsColor: .textBackgroundColor))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color(nsColor: .separatorColor).opacity(0.28), lineWidth: 1)
+                    .stroke(Color(nsColor: .separatorColor).opacity(0.18), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
@@ -187,6 +260,7 @@ struct WallpaperLibraryView: View {
                     .foregroundColor(.secondary)
             }
         }
+        .padding(.vertical, 2)
     }
 
     private var selectedFileInfo: FileInfo? {
@@ -287,7 +361,7 @@ struct WallpaperLibraryView: View {
                     .padding(.top, 2)
             }
         }
-        .padding(.top, 6)
+        .padding(.top, layoutMode == .compactDesktop ? 0 : 6)
     }
 
     private func initialize() {

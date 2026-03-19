@@ -304,25 +304,31 @@ private struct LibraryDashboardView: View {
 
             Group {
                 if showsSidePanel {
-                    HStack(spacing: 24) {
+                    HStack(spacing: 0) {
                         librarySurface
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                        Divider()
+                            .padding(.vertical, 8)
 
                         playlistsPanel
                             .frame(width: 360)
                             .frame(maxHeight: .infinity)
                     }
                 } else {
-                    VStack(spacing: 20) {
+                    VStack(spacing: 0) {
                         librarySurface
                             .frame(maxWidth: .infinity, minHeight: 400, maxHeight: .infinity)
+
+                        Divider()
+                            .padding(.vertical, 8)
 
                         playlistsPanel
                             .frame(maxWidth: .infinity, minHeight: 260)
                     }
                 }
             }
-            .padding(24)
+            .padding(20)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Color(nsColor: .windowBackgroundColor))
         }
@@ -336,17 +342,10 @@ private struct LibraryDashboardView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            WallpaperLibraryView()
+            WallpaperLibraryView(layoutMode: .fullDashboard)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(Color(nsColor: .underPageBackgroundColor))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(Color(nsColor: .separatorColor).opacity(0.2), lineWidth: 1)
-                )
         }
+        .padding(.trailing, 24)
     }
 
     private var playlistsPanel: some View {
@@ -400,15 +399,8 @@ private struct LibraryDashboardView: View {
                 )
             }
         }
-        .padding(22)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color(nsColor: .underPageBackgroundColor))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color(nsColor: .separatorColor).opacity(0.2), lineWidth: 1)
-        )
+        .padding(.leading, 24)
+        .padding(.vertical, 6)
     }
 }
 

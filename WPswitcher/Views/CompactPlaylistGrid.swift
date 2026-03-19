@@ -8,6 +8,10 @@ private extension PlaylistRecord {
             }
         }
     }
+
+    var compactSummary: String {
+        "\(entries.count) entries • \(readyEntryCount) ready • every \(intervalMinutes)m"
+    }
 }
 
 struct CompactPlaylistGrid: View {
@@ -82,9 +86,12 @@ private struct CompactPlaylistCard: View {
                 }
 
                 HStack(spacing: 8) {
-                    PlaylistMetricPill(label: "Entries", value: "\(playlist.entries.count)")
-                    PlaylistMetricPill(label: "Ready", value: "\(playlist.readyEntryCount)")
-                    PlaylistMetricPill(label: "Every", value: "\(playlist.intervalMinutes)m")
+                    Text(playlist.compactSummary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+
+                    Spacer(minLength: 0)
                 }
 
                 HStack(spacing: 10) {
@@ -115,12 +122,12 @@ private struct CompactPlaylistCard: View {
             .frame(maxWidth: .infinity, minHeight: 176, alignment: .topLeading)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color(nsColor: isSelected ? .controlAccentColor.withSystemEffect(.pressed) : .controlBackgroundColor))
+                    .fill(Color(nsColor: isSelected ? .selectedContentBackgroundColor : .controlBackgroundColor))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .strokeBorder(
-                        isSelected ? Color.accentColor.opacity(0.8) : Color(nsColor: .separatorColor).opacity(0.35),
+                        isSelected ? Color.accentColor.opacity(0.55) : Color(nsColor: .separatorColor).opacity(0.2),
                         lineWidth: isSelected ? 2 : 1
                     )
             )
@@ -186,26 +193,4 @@ private enum ActionProminence {
     case primary
     case secondary
     case destructive
-}
-
-private struct PlaylistMetricPill: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.primary)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color(nsColor: .textBackgroundColor))
-        )
-    }
 }
