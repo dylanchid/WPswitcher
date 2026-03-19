@@ -101,25 +101,58 @@ struct WallpaperLibraryView: View {
 
     private var compactDesktopSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Current Desktop")
-                    .font(.title3.weight(.semibold))
-                Text(selectionSummary)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Current Desktop")
+                        .font(.title3.weight(.semibold))
+                    Text(selectionSummary)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 12)
+
+                compactActionBar
             }
 
             HStack(alignment: .top, spacing: 14) {
-                previewCard
+                compactPreviewSurface
                     .frame(maxWidth: .infinity)
-                    .frame(height: 250)
+                    .frame(height: 205)
 
                 compactMetadataSection
-                    .frame(width: 220, alignment: .topLeading)
+                    .frame(width: 190, alignment: .topLeading)
             }
 
             filmstripSection
         }
+    }
+
+    private var compactActionBar: some View {
+        HStack(spacing: 8) {
+            actionButton(
+                title: "Import",
+                systemImage: "square.and.arrow.down",
+                style: .prominent,
+                action: importWallpapers
+            )
+            .disabled(isImporting)
+
+            actionButton(
+                title: schedulerState.isRunning ? "Pause" : "Resume",
+                systemImage: schedulerState.isRunning ? "pause.fill" : "play.fill",
+                style: .standard,
+                action: toggleRotation
+            )
+
+            actionButton(
+                title: "Next",
+                systemImage: "arrow.right.circle",
+                style: .standard,
+                action: advanceWallpaper
+            )
+        }
+        .controlSize(.small)
     }
 
     private var compactMetadataSection: some View {
@@ -142,33 +175,6 @@ struct WallpaperLibraryView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
-
-            Spacer(minLength: 4)
-
-            HStack(spacing: 10) {
-                actionButton(
-                    title: "Import",
-                    systemImage: "square.and.arrow.down",
-                    style: .prominent,
-                    action: importWallpapers
-                )
-                .disabled(isImporting)
-
-                actionButton(
-                    title: schedulerState.isRunning ? "Pause" : "Resume",
-                    systemImage: schedulerState.isRunning ? "pause.fill" : "play.fill",
-                    style: .standard,
-                    action: toggleRotation
-                )
-
-                actionButton(
-                    title: "Next",
-                    systemImage: "arrow.right.circle",
-                    style: .standard,
-                    action: advanceWallpaper
-                )
-            }
-            .controlSize(.small)
         }
         .frame(maxHeight: .infinity, alignment: .topLeading)
     }
@@ -250,6 +256,11 @@ struct WallpaperLibraryView: View {
                     .stroke(Color(nsColor: .separatorColor).opacity(0.18), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var compactPreviewSurface: some View {
+        previewContent
+            .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     private var previewContent: some View {
@@ -393,7 +404,7 @@ struct WallpaperLibraryView: View {
                     .padding(.top, 2)
             }
         }
-        .padding(.top, layoutMode == .compactDesktop ? 0 : 6)
+        .padding(.top, layoutMode == .compactDesktop ? 2 : 6)
     }
 
     private func initialize() {

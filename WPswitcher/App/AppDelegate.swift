@@ -10,11 +10,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private let mainWindowFrameKey = "MainWindowFrame"
     private let compactWindowFrameKey = "CompactWindowFrame"
     private let mainWindowFrameScaleVersionKey = "MainWindowFrameScaleVersion"
+    private let compactWindowFrameScaleVersionKey = "CompactWindowFrameScaleVersion"
     private let mainWindowFrameScaleVersion = 1
+    private let compactWindowFrameScaleVersion = 1
     private let defaultMainWindowSize = NSSize(width: 1160, height: 760)
     private let minimumMainWindowSize = NSSize(width: 920, height: 620)
-    private let defaultCompactWindowSize = NSSize(width: 760, height: 500)
-    private let minimumCompactWindowSize = NSSize(width: 620, height: 420)
+    private let defaultCompactWindowSize = NSSize(width: 570, height: 380)
+    private let minimumCompactWindowSize = NSSize(width: 520, height: 340)
 
     func configure(with services: ServiceRegistry) {
         self.services = services
@@ -80,6 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func buildCompactWindow() {
         guard let services else { return }
+        migrateSavedCompactWindowFrameIfNeeded()
 
         let rootView = WallpaperLibraryView(layoutMode: .compactDesktop)
             .environmentObject(services)
@@ -248,6 +251,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         frame.size = scaledSize
 
         userDefaults.set(NSStringFromRect(frame), forKey: mainWindowFrameKey)
+    }
+
+    private func migrateSavedCompactWindowFrameIfNeeded() {
+        let savedVersion = userDefaults.integer(forKey: compactWindowFrameScaleVersionKey)
+        guard savedVersion < compactWindowFrameScaleVersion else { return }
+        defer {
+            userDefaults.set(compactWindowFrameScaleVersion, forKey: compactWindowFrameScaleVersionKey)
+        }
+
+        guard let frameString = userDefaults.string(forKey: compactWindowFrameKey) else { return }
+        var frame = NSRectFromString(frameString)
+        guard frame.width > 0, frame.height > 0 else { return }
+
+        let targetSize = NSSize(
+            width: max(minimumCompactWindowSize.width, min(defaultCompactWindowSize.width, frame.width)),
+            height: max(minimumCompactWindowSize.height, min(defaultCompactWindowSize.height, frame.height))
+        )
+
+        guard targetSize != frame.size else { return }
+
+        let widthDelta = frame.width - targetSize.width
+        let heightDelta = frame.height - targetSize.height
+        frame.origin.x += widthDelta / 2
+        frame.origin.y += heightDelta / 2
+        frame.size = targetSize
+
+        userDefaults.set(NSStringFromRect(frame), forKey: compactWindowFrameKey)
     }
 
     private func saveFrame(for window: NSWindow) {
