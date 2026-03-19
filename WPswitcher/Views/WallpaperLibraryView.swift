@@ -109,17 +109,42 @@ struct WallpaperLibraryView: View {
                     .foregroundStyle(.secondary)
             }
 
-            previewCard
-                .frame(height: 260)
+            HStack(alignment: .top, spacing: 14) {
+                previewCard
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 250)
 
-            compactActions
+                compactMetadataSection
+                    .frame(width: 220, alignment: .topLeading)
+            }
 
             filmstripSection
         }
     }
 
-    private var compactActions: some View {
+    private var compactMetadataSection: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if let info = selectedFileInfo {
+                Group {
+                    if let createdAt = info.createdAt {
+                        compactMetaRow(title: "Created", value: Self.fileInfoDateFormatter.string(from: createdAt))
+                    }
+                    if let sizeBytes = info.sizeBytes {
+                        compactMetaRow(title: "Size", value: Self.byteFormatter.string(fromByteCount: sizeBytes))
+                    }
+                    if let fileType = info.fileType {
+                        compactMetaRow(title: "Type", value: fileType)
+                    }
+                    compactMetaRow(title: "Location", value: info.location, allowsWrapping: true)
+                }
+            } else {
+                Text("Select a wallpaper to see details.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 4)
+
             HStack(spacing: 10) {
                 actionButton(
                     title: "Import",
@@ -143,14 +168,21 @@ struct WallpaperLibraryView: View {
                     action: advanceWallpaper
                 )
             }
+            .controlSize(.small)
+        }
+        .frame(maxHeight: .infinity, alignment: .topLeading)
+    }
 
-            if let info = selectedFileInfo {
-                Text(info.name)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
+    private func compactMetaRow(title: String, value: String, allowsWrapping: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.body.weight(.medium))
+                .lineLimit(allowsWrapping ? 3 : 1)
+                .truncationMode(.middle)
+                .fixedSize(horizontal: false, vertical: allowsWrapping)
         }
     }
 

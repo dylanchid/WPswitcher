@@ -13,8 +13,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private let mainWindowFrameScaleVersion = 1
     private let defaultMainWindowSize = NSSize(width: 1160, height: 760)
     private let minimumMainWindowSize = NSSize(width: 920, height: 620)
-    private let defaultCompactWindowSize = NSSize(width: 430, height: 520)
-    private let minimumCompactWindowSize = NSSize(width: 360, height: 420)
+    private let defaultCompactWindowSize = NSSize(width: 760, height: 500)
+    private let minimumCompactWindowSize = NSSize(width: 620, height: 420)
 
     func configure(with services: ServiceRegistry) {
         self.services = services
@@ -92,7 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if loadWindowFrame(forKey: compactWindowFrameKey) == nil {
             panel.setContentSize(defaultCompactWindowSize)
         }
-        panel.styleMask = [.titled, .closable, .fullSizeContentView]
+        panel.styleMask = [.titled, .closable, .fullSizeContentView, .nonactivatingPanel]
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.isFloatingPanel = true
@@ -145,13 +145,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func showCompactWindow(anchorToStatusItem: Bool) {
         guard let window = compactWindowController?.window else { return }
-        NSApp.activate(ignoringOtherApps: true)
         if let savedFrame = loadWindowFrame(forKey: compactWindowFrameKey) {
             window.setFrame(savedFrame, display: false)
         } else if anchorToStatusItem {
             positionCompactWindow(window)
         }
-        window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
+        window.makeKey()
     }
 
     private func hideCompactWindow() {
