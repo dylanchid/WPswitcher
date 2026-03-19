@@ -84,7 +84,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard let services else { return }
         migrateSavedCompactWindowFrameIfNeeded()
 
-        let rootView = WallpaperLibraryView(layoutMode: .compactDesktop)
+        let rootView = CompactWorkspaceView()
             .environmentObject(services)
             .environmentObject(services.schedulerState)
 

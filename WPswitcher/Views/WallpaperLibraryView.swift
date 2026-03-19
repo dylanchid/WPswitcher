@@ -118,10 +118,10 @@ struct WallpaperLibraryView: View {
             HStack(alignment: .top, spacing: 14) {
                 compactPreviewSurface
                     .frame(maxWidth: .infinity)
-                    .frame(height: 205)
+                    .frame(height: 148)
 
                 compactMetadataSection
-                    .frame(width: 190, alignment: .topLeading)
+                    .frame(width: 170, alignment: .topLeading)
             }
 
             filmstripSection
@@ -185,8 +185,8 @@ struct WallpaperLibraryView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text(value)
-                .font(.body.weight(.medium))
-                .lineLimit(allowsWrapping ? 3 : 1)
+                .font(.callout.weight(.medium))
+                .lineLimit(allowsWrapping ? 2 : 1)
                 .truncationMode(.middle)
                 .fixedSize(horizontal: false, vertical: allowsWrapping)
         }
@@ -907,9 +907,17 @@ private struct ThumbnailPlaceholder: View {
 #if DEBUG
 struct WallpaperLibraryView_Previews: PreviewProvider {
     static var previews: some View {
-        WallpaperLibraryView()
-            .environmentObject(ServiceRegistry.preview)
-            .frame(width: 860, height: 560)
+        Group {
+            WallpaperLibraryView()
+                .environmentObject(ServiceRegistry.preview)
+                .previewDisplayName("Dashboard")
+                .frame(width: 860, height: 560)
+
+            WallpaperLibraryView(layoutMode: .compactDesktop)
+                .environmentObject(ServiceRegistry.preview)
+                .previewDisplayName("Quick Access")
+                .frame(width: 570, height: 380)
+        }
     }
 }
 #endif

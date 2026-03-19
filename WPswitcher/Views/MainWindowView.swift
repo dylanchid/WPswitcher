@@ -431,7 +431,7 @@ private enum MainDestination: Hashable {
     case playlist(UUID)
 }
 
-private struct PlaylistEditorHost: View {
+struct PlaylistEditorHost: View {
     private let playlist: PlaylistRecord
     private let onSave: (PlaylistRecord) -> Void
     @StateObject private var viewModel: PlaylistEditorViewModel
@@ -456,6 +456,284 @@ private struct PlaylistEditorHost: View {
                     viewModel.applyUpdatedRecord(newValue)
                 }
             }
+    }
+}
+
+struct CompactWorkspaceView: View {
+    @EnvironmentObject private var services: ServiceRegistry
+    @State private var playlists: [PlaylistRecord] = []
+    @State private var selectedPlaylistID: UUID?
+    @State private var playlistError: String?
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                WallpaperLibraryView(layoutMode: .compactDesktop)
+
+                Divider()
+
+                playlistsSection
+
+                if let selectedPlaylist {
+                    Divider()
+
+                    PlaylistEditorHost(
+                        playlist: selectedPlaylist,
+                        services: services,
+                        onSave: handlePlaylistSaved
+                    )
+                    .id(selectedPlaylist.id)
+                    .frame(minHeight: 420)
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+        .background(Color(nsColor: .windowBackgroundColor))
+        .onAppear(perform: refreshPlaylists)
+    }
+
+    private var playlistsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Playlists")
+                        .font(.title3.weight(.semibold))
+                    Text("Scroll through sets, play one now, or open it for editing below.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 10)
+
+                Button {
+                    createPlaylist()
+                } label: {
+                    Label("New", systemImage: "plus")
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+
+            if let playlistError {
+                Text(playlistError)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
+
+            if playlists.isEmpty {
+                CompactWorkspaceEmptyState()
+            } else {
+                LazyVStack(spacing: 10) {
+                    ForEach(playlists) { playlist in
+                        CompactWorkspacePlaylistCard(
+                            playlist: playlist,
+                            isSelected: selectedPlaylistID == playlist.id,
+                            previewText: previewText(for: playlist),
+                            canPlay: canPlay(playlist),
+                            onOpen: { selectedPlaylistID = playlist.id },
+                            onPlayNow: { applyPlaylistNow(playlist) },
+                            onDelete: { deletePlaylist(playlist.id) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private var selectedPlaylist: PlaylistRecord? {
+        guard let selectedPlaylistID else { return nil }
+        return playlists.first(where: { $0.id == selectedPlaylistID })
+    }
+
+    private func refreshPlaylists() {
+        Task {
+            do {
+                let fetched = try await services.playlistStore.fetchPlaylists()
+                await MainActor.run {
+                    playlists = fetched
+                    playlistError = nil
+                    if let selectedPlaylistID,
+                       !fetched.contains(where: { $0.id == selectedPlaylistID }) {
+                        self.selectedPlaylistID = nil
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    playlists = []
+                    playlistError = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    private func playableEntry(for playlist: PlaylistRecord) -> PlaylistEntryRecord? {
+        playlist.entries.first { $0.lightWallpaper != nil || $0.darkWallpaper != nil }
+    }
+
+    private func previewText(for playlist: PlaylistRecord) -> String {
+        if playlist.entries.isEmpty {
+            return "No entries yet"
+        }
+        if let entry = playableEntry(for: playlist),
+           let wallpaper = entry.lightWallpaper ?? entry.darkWallpaper {
+            return wallpaper.displayName
+        }
+        return "Add wallpapers to preview"
+    }
+
+    private func canPlay(_ playlist: PlaylistRecord) -> Bool {
+        playableEntry(for: playlist) != nil
+    }
+
+    private func applyPlaylistNow(_ playlist: PlaylistRecord) {
+        guard let entry = playableEntry(for: playlist) else {
+            playlistError = "Playlist \(playlist.name) has no playable entries."
+            return
+        }
+
+        Task {
+            let applied = services.wallpaperService.apply(entry: entry, from: playlist)
+            await MainActor.run {
+                playlistError = applied ? nil : "Unable to apply \(playlist.name) right now."
+            }
+        }
+    }
+
+    private func createPlaylist() {
+        let draft = PlaylistDraft(
+            id: nil,
+            name: "Untitled Playlist",
+            intervalMinutes: 15,
+            playbackMode: .sequential,
+            multiDisplayPolicy: .mirror,
+            entries: [],
+            displayAssignments: []
+        )
+
+        Task {
+            do {
+                let record = try await services.playlistStore.createPlaylist(draft)
+                await MainActor.run {
+                    handlePlaylistSaved(record)
+                    selectedPlaylistID = record.id
+                }
+            } catch {
+                await MainActor.run {
+                    playlistError = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    private func handlePlaylistSaved(_ record: PlaylistRecord) {
+        if let index = playlists.firstIndex(where: { $0.id == record.id }) {
+            playlists[index] = record
+        } else {
+            playlists.append(record)
+        }
+        playlists.sort { $0.createdAt < $1.createdAt }
+        playlistError = nil
+    }
+
+    private func deletePlaylist(_ id: UUID) {
+        Task {
+            do {
+                try await services.playlistStore.deletePlaylist(id: id)
+                await MainActor.run {
+                    playlists.removeAll { $0.id == id }
+                    if selectedPlaylistID == id {
+                        selectedPlaylistID = nil
+                    }
+                    playlistError = nil
+                }
+            } catch {
+                await MainActor.run {
+                    playlistError = error.localizedDescription
+                }
+            }
+        }
+    }
+}
+
+private struct CompactWorkspacePlaylistCard: View {
+    let playlist: PlaylistRecord
+    let isSelected: Bool
+    let previewText: String
+    let canPlay: Bool
+    let onOpen: () -> Void
+    let onPlayNow: () -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(playlist.name)
+                        .font(.headline)
+                        .lineLimit(1)
+                    Text(previewText)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+
+                Spacer(minLength: 0)
+
+                Text("\(playlist.entries.count) entries")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 8) {
+                Button(action: onOpen) {
+                    Label(isSelected ? "Editing" : "Open", systemImage: "slider.horizontal.3")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Button(action: onPlayNow) {
+                    Label("Play Now", systemImage: "play.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .disabled(!canPlay)
+
+                Button(role: .destructive, action: onDelete) {
+                    Label("Delete", systemImage: "trash")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(nsColor: isSelected ? .selectedContentBackgroundColor : .controlBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(isSelected ? Color.accentColor.opacity(0.45) : Color(nsColor: .separatorColor).opacity(0.18), lineWidth: 1)
+        )
+    }
+}
+
+private struct CompactWorkspaceEmptyState: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("No playlists yet")
+                .font(.headline)
+            Text("Create one to keep the compact window as your primary wallpaper control surface.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
     }
 }
 
